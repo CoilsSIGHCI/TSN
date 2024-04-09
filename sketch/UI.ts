@@ -3,8 +3,12 @@ type FunctionButton = {
     onClick: () => void
 }
 
+type FunctionButtonRender = FunctionButton & {
+    lines?: number[][]
+}
+
 class UI {
-    buttons: FunctionButton[]
+    buttons: FunctionButtonRender[]
     frame: [number, number, number, number] = [30, 30, 400, 300]
 
     // random color for the avatar (HSB color mode)
@@ -12,6 +16,8 @@ class UI {
     avatarD = 70
     avatarX = this.frame[0] + this.avatarD / 2 + 40
     avatarY = this.frame[1] + this.avatarD / 2 + 30
+
+    visibilitySketchyLines: number[][] = []
 
     id: number = this.getRandomID()
     verified = false
@@ -85,7 +91,7 @@ class UI {
         fill('rgb(23,176,198)')
         ellipse(x, y, size)
         fill(255)
-        ellipse(x, y, size * 7 / 20)
+        ellipse(x, y, (size * 7) / 20)
     }
 
     drawID() {
@@ -107,11 +113,85 @@ class UI {
         }
     }
 
+    private drawButtonSketchyOutlines(
+        lines: number[][],
+        buttonX: number,
+        buttonY: number,
+        buttonWidth: number,
+        buttonHeight: number,
+        sketchyLines = 2,
+        overshoot = 3,
+        dithering = 2
+    ) {
+        if (lines.length === 0) {
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX = buttonX + random(-dithering, dithering)
+                const startY =
+                    buttonY + random(-dithering, dithering) - overshoot
+                const endX = buttonX + random(-dithering, dithering)
+                const endY =
+                    buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot
+                lines.push([startX, startY, endX, endY, random(89, 130)])
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX =
+                    buttonX + buttonWidth + random(-dithering, dithering)
+                const startY =
+                    buttonY + random(-dithering, dithering) - overshoot
+                const endX =
+                    buttonX + buttonWidth + random(-dithering, dithering)
+                const endY =
+                    buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot
+                lines.push([startX, startY, endX, endY, random(89, 130)])
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX =
+                    buttonX + random(-dithering, dithering) - overshoot
+                const startY =
+                    buttonY + buttonHeight + random(-dithering, dithering)
+                const endX =
+                    buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot
+                const endY =
+                    buttonY + buttonHeight + random(-dithering, dithering)
+                lines.push([startX, startY, endX, endY, random(89, 130)])
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX =
+                    buttonX + random(-dithering, dithering) - overshoot
+                const startY = buttonY + random(-dithering, dithering)
+                const endX =
+                    buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot
+                const endY = buttonY + random(-dithering, dithering)
+                lines.push([startX, startY, endX, endY, random(89, 130)])
+            }
+        }
+
+        push()
+        for (let j = 0; j < lines.length; j++) {
+            const l = lines[j]
+            stroke(l[4])
+            line(...(l.slice(undefined, 4) as [number, number, number, number]))
+        }
+        pop()
+    }
+
     drawButtons() {
         // calculate button dimensions
         const buttonWidth = 60
-        const buttonHeight = 60
-        const buttonPadding = 10
+        const buttonHeight = 40
+        const buttonPadding = 20
 
         // show buttons
         for (let i = 0; i < this.buttons.length; i++) {
@@ -121,6 +201,22 @@ class UI {
 
             fill('rgba(0,0,0,0)')
             rect(buttonX, buttonY, buttonWidth, buttonHeight)
+            // draw sketchy lines as button border
+            stroke(0)
+            strokeWeight(1)
+
+            if (this.buttons[i].lines === undefined) {
+                this.buttons[i].lines = []
+            }
+
+            this.drawButtonSketchyOutlines(
+                this.buttons[i].lines,
+                buttonX,
+                buttonY,
+                buttonWidth,
+                buttonHeight
+            )
+
             fill(0)
             textAlign(CENTER, CENTER) // set text alignment to center
             text(
@@ -142,6 +238,44 @@ class UI {
         }
     }
 
+    drawVisibilityButton() {
+        // draw visibility button on the top right corner
+        const buttonSize = 40
+        const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30
+        const buttonY = this.frame[1] + 30
+
+        fill(255)
+        stroke(0)
+
+        this.drawButtonSketchyOutlines(
+            this.visibilitySketchyLines,
+            buttonX,
+            buttonY,
+            buttonSize,
+            buttonSize
+        )
+
+        fill(0)
+        textAlign(CENTER, CENTER) // set text alignment to center
+        text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2) // center the text
+
+        // click event
+        if (
+            mouseIsPressed &&
+            mouseX > buttonX &&
+            mouseX < buttonX + buttonSize &&
+            mouseY > buttonY &&
+            mouseY < buttonY + buttonSize
+        ) {
+            this.toggleVisibility()
+        }
+    }
+
+    toggleVisibility() {
+        // TODO: implement visibility toggle
+        return
+    }
+
     // create p5.js rect
     render() {
         // draw frame
@@ -155,5 +289,8 @@ class UI {
 
         // draw buttons
         this.drawButtons()
+
+        // draw visibility button
+        this.drawVisibilityButton()
     }
 }

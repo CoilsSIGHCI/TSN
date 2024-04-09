@@ -14,6 +14,7 @@ var UI = (function () {
         this.avatarD = 70;
         this.avatarX = this.frame[0] + this.avatarD / 2 + 40;
         this.avatarY = this.frame[1] + this.avatarD / 2 + 30;
+        this.visibilitySketchyLines = [];
         this.id = this.getRandomID();
         this.verified = false;
         this.buttons = [
@@ -74,7 +75,7 @@ var UI = (function () {
         fill('rgb(23,176,198)');
         ellipse(x, y, size);
         fill(255);
-        ellipse(x, y, size * 7 / 20);
+        ellipse(x, y, (size * 7) / 20);
     };
     UI.prototype.drawID = function () {
         var idX = this.frame[0] + 60 + this.avatarD;
@@ -90,15 +91,75 @@ var UI = (function () {
             UI.verifiedBadge(idX + this.id + 17, idY);
         }
     };
+    UI.prototype.drawButtonSketchyOutlines = function (lines, buttonX, buttonY, buttonWidth, buttonHeight, sketchyLines, overshoot, dithering) {
+        if (sketchyLines === void 0) { sketchyLines = 2; }
+        if (overshoot === void 0) { overshoot = 3; }
+        if (dithering === void 0) { dithering = 2; }
+        if (lines.length === 0) {
+            for (var j = 0; j < sketchyLines; j++) {
+                var startX = buttonX + random(-dithering, dithering);
+                var startY = buttonY + random(-dithering, dithering) - overshoot;
+                var endX = buttonX + random(-dithering, dithering);
+                var endY = buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot;
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (var j = 0; j < sketchyLines; j++) {
+                var startX = buttonX + buttonWidth + random(-dithering, dithering);
+                var startY = buttonY + random(-dithering, dithering) - overshoot;
+                var endX = buttonX + buttonWidth + random(-dithering, dithering);
+                var endY = buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot;
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (var j = 0; j < sketchyLines; j++) {
+                var startX = buttonX + random(-dithering, dithering) - overshoot;
+                var startY = buttonY + buttonHeight + random(-dithering, dithering);
+                var endX = buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot;
+                var endY = buttonY + buttonHeight + random(-dithering, dithering);
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (var j = 0; j < sketchyLines; j++) {
+                var startX = buttonX + random(-dithering, dithering) - overshoot;
+                var startY = buttonY + random(-dithering, dithering);
+                var endX = buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot;
+                var endY = buttonY + random(-dithering, dithering);
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+        }
+        push();
+        for (var j = 0; j < lines.length; j++) {
+            var l = lines[j];
+            stroke(l[4]);
+            line.apply(void 0, l.slice(undefined, 4));
+        }
+        pop();
+    };
     UI.prototype.drawButtons = function () {
         var buttonWidth = 60;
-        var buttonHeight = 60;
-        var buttonPadding = 10;
+        var buttonHeight = 40;
+        var buttonPadding = 20;
         for (var i = 0; i < this.buttons.length; i++) {
             var buttonX = this.frame[0] + i * buttonWidth + 50 + i * buttonPadding;
             var buttonY = this.frame[1] + this.frame[3] - buttonHeight - 30;
             fill('rgba(0,0,0,0)');
             rect(buttonX, buttonY, buttonWidth, buttonHeight);
+            stroke(0);
+            strokeWeight(1);
+            if (this.buttons[i].lines === undefined) {
+                this.buttons[i].lines = [];
+            }
+            this.drawButtonSketchyOutlines(this.buttons[i].lines, buttonX, buttonY, buttonWidth, buttonHeight);
             fill(0);
             textAlign(CENTER, CENTER);
             text(this.buttons[i].name, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
@@ -111,11 +172,33 @@ var UI = (function () {
             }
         }
     };
+    UI.prototype.drawVisibilityButton = function () {
+        var buttonSize = 40;
+        var buttonX = this.frame[0] + this.frame[2] - buttonSize - 30;
+        var buttonY = this.frame[1] + 30;
+        fill(255);
+        stroke(0);
+        this.drawButtonSketchyOutlines(this.visibilitySketchyLines, buttonX, buttonY, buttonSize, buttonSize);
+        fill(0);
+        textAlign(CENTER, CENTER);
+        text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2);
+        if (mouseIsPressed &&
+            mouseX > buttonX &&
+            mouseX < buttonX + buttonSize &&
+            mouseY > buttonY &&
+            mouseY < buttonY + buttonSize) {
+            this.toggleVisibility();
+        }
+    };
+    UI.prototype.toggleVisibility = function () {
+        return;
+    };
     UI.prototype.render = function () {
         this.drawFrame();
         this.drawAvatar();
         this.drawID();
         this.drawButtons();
+        this.drawVisibilityButton();
     };
     return UI;
 }());
