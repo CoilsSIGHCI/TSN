@@ -57,7 +57,7 @@ var UI = (function () {
         setInterval(function () {
             _this.avatarColor = _this.getRandomAvatarColor();
             _this.id = _this.getRandomID();
-            _this.verified = random() > 0.5;
+            _this.verified = random() < 0.1;
         }, 3000);
     };
     UI.prototype.drawFrame = function () {
@@ -67,6 +67,14 @@ var UI = (function () {
     UI.prototype.drawAvatar = function () {
         fill(this.avatarColor);
         ellipse(this.avatarX, this.avatarY, this.avatarD);
+    };
+    UI.verifiedBadge = function (x, y, size) {
+        if (size === void 0) { size = 20; }
+        stroke('rgba(0,0,0,0)');
+        fill('rgb(23,176,198)');
+        ellipse(x, y, size);
+        fill(255);
+        ellipse(x, y, size * 7 / 20);
     };
     UI.prototype.drawID = function () {
         var idX = this.frame[0] + 60 + this.avatarD;
@@ -79,10 +87,7 @@ var UI = (function () {
         fill(121);
         rect(idX, idY - 15, this.id, 30, 7);
         if (this.verified) {
-            fill('rgb(23,176,198)');
-            ellipse(idX + this.id + 17, idY, 20);
-            fill(255);
-            ellipse(idX + this.id + 17, idY, 7);
+            UI.verifiedBadge(idX + this.id + 17, idY);
         }
     };
     UI.prototype.drawButtons = function () {
@@ -114,8 +119,13 @@ var UI = (function () {
     };
     return UI;
 }());
+var Campaign = (function () {
+    function Campaign() {
+    }
+    return Campaign;
+}());
 var Individual = (function () {
-    function Individual(vector, personality) {
+    function Individual(vector, verified, personality) {
         this.personality = personality || {
             openness: random(0, 1),
             conscientiousness: random(0, 1),
@@ -123,35 +133,12 @@ var Individual = (function () {
             agreeableness: random(0, 1),
             neuroticism: random(0, 1),
         };
+        this.verified = random() < 0.1;
         this.vector = vector;
     }
     return Individual;
 }());
-var numberOfShapesControl;
-var points = [];
-var ui;
-function setup() {
-    console.log('🚀 - Setup initialized - P5 is running');
-    createCanvas(windowWidth, windowHeight);
-    var numberOfShapes = 99;
-    noFill().frameRate(60);
-    ui = new UI();
-    for (var i = 0; i < numberOfShapes; i++) {
-        var x = void 0, y = void 0, status_1;
-        do {
-            x = random(0, width);
-            y = random(0, height);
-        } while (ui.isPointInside(x, y));
-        points.push(new Individual(createVector(x, y)));
-    }
-    ui.enableUpdate();
-}
-function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
-}
-function draw() {
-    background(234);
-    var functions = ui.buttons;
+function renderPool(points) {
     for (var i = 0; i < points.length; i++) {
         if (!ui.isPointInside(points[i].vector.x, points[i].vector.y)) {
             break;
@@ -187,16 +174,25 @@ function draw() {
         points[i].vector.x += random(-0.5, 0.5);
         points[i].vector.y += random(-0.5, 0.5);
     }
-    stroke('rgba(0,0,0,0.8)');
     for (var i = 0; i < points.length; i++) {
+        stroke('rgba(0,0,0,0)');
+        fill('rgba(0,0,0,0.8)');
         ellipse(points[i].vector.x, points[i].vector.y, 10, 10);
+        if (points[i].verified) {
+            UI.verifiedBadge(points[i].vector.x + 12, points[i].vector.y, 10);
+        }
     }
     function distance(point1, point2) {
-        return Math.sqrt(Math.pow(point1.vector.x - point2.vector.x, 2) + Math.pow(point1.vector.y - point2.vector.y, 2));
+        return Math.sqrt(Math.pow(point1.vector.x - point2.vector.x, 2) +
+            Math.pow(point1.vector.y - point2.vector.y, 2));
     }
+    var lines = [];
     for (var i = 0; i < points.length; i++) {
         var distances = [];
         for (var j = 0; j < points.length; j++) {
+            if (points[j].verified && points[i].verified) {
+                continue;
+            }
             if (i != j) {
                 distances.push({
                     index: j,
@@ -206,24 +202,68 @@ function draw() {
         }
         distances.sort(function (a, b) { return a.distance - b.distance; });
         var x = points[i].personality.extraversion * 20;
+        if (points[i].verified) {
+            x *= 3;
+        }
         for (var j = 0; j < x && j < distances.length; j++) {
             var point_1 = points[distances[j].index];
-            if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) < 15 ||
+            if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) <
+                15 ||
                 dist(mouseX, mouseY, point_1.vector.x, point_1.vector.y) < 15) {
-                stroke('azure');
                 fill('azure');
                 ellipse(points[i].vector.x, points[i].vector.y, 10, 10);
             }
             else {
-                stroke('rgba(0,0,0,0.1)');
+                strokeWeight(1);
+                stroke('rgba(50,50,50,0.1)');
+            }
+            push();
+            var lineKey = "".concat(i, "-").concat(distances[j].index);
+            var reverseLineKey = "".concat(distances[j].index, "-").concat(i);
+            if (!points[i].verified &&
+                (lines.indexOf(lineKey) !== -1 ||
+                    lines.indexOf(reverseLineKey) !== -1)) {
+                strokeWeight(2);
+                stroke('rgba(0, 0, 0, .2)');
+            }
+            else {
+                lines.push(lineKey);
             }
             line(points[i].vector.x, points[i].vector.y, point_1.vector.x, point_1.vector.y);
+            pop();
         }
         if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) < 15) {
             fill('azure');
             ellipse(points[i].vector.x, points[i].vector.y, 15, 15);
         }
     }
+}
+var numberOfShapesControl;
+var points = [];
+var ui;
+function setup() {
+    console.log('🚀 - Setup initialized - P5 is running');
+    createCanvas(windowWidth, windowHeight);
+    var numberOfShapes = 99;
+    noFill().frameRate(60);
+    ui = new UI();
+    for (var i = 0; i < numberOfShapes; i++) {
+        var x = void 0, y = void 0, status_1;
+        do {
+            x = random(0, width);
+            y = random(0, height);
+        } while (ui.isPointInside(x, y));
+        points.push(new Individual(createVector(x, y)));
+    }
+    ui.enableUpdate();
+}
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+}
+function draw() {
+    background(234);
+    var functions = ui.buttons;
+    renderPool(points);
     ui.render();
 }
 //# sourceMappingURL=build.js.map

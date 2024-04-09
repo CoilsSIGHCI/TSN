@@ -66,7 +66,7 @@ class UI {
             this.avatarColor = this.getRandomAvatarColor()
             this.id = this.getRandomID()
             // verified by chance (50%)
-            this.verified = random() > 0.5
+            this.verified = random() < 0.1
         }, 3000)
     }
 
@@ -78,6 +78,14 @@ class UI {
     drawAvatar() {
         fill(this.avatarColor)
         ellipse(this.avatarX, this.avatarY, this.avatarD)
+    }
+
+    static verifiedBadge(x: number, y: number, size = 20) {
+        stroke('rgba(0,0,0,0)')
+        fill('rgb(23,176,198)')
+        ellipse(x, y, size)
+        fill(255)
+        ellipse(x, y, size * 7 / 20)
     }
 
     drawID() {
@@ -95,10 +103,7 @@ class UI {
 
         // verified badge
         if (this.verified) {
-            fill('rgb(23,176,198)')
-            ellipse(idX + this.id + 17, idY, 20)
-            fill(255)
-            ellipse(idX + this.id + 17, idY, 7)
+            UI.verifiedBadge(idX + this.id + 17, idY)
         }
     }
 
