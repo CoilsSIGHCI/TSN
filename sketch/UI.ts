@@ -42,6 +42,12 @@ class UI {
                     console.log('Button 3 clicked')
                 },
             },
+            {
+                name: 'SCAM',
+                onClick: () => {
+                    console.log('Button 4 clicked')
+                },
+            },
         ]
     }
 

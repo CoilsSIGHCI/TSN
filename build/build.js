@@ -36,6 +36,12 @@ var UI = (function () {
                     console.log('Button 3 clicked');
                 },
             },
+            {
+                name: 'SCAM',
+                onClick: function () {
+                    console.log('Button 4 clicked');
+                },
+            },
         ];
     }
     UI.prototype.isPointInside = function (x, y) {
@@ -221,6 +227,11 @@ var Individual = (function () {
     }
     return Individual;
 }());
+var Message = (function () {
+    function Message() {
+    }
+    return Message;
+}());
 function renderPool(points) {
     for (var i = 0; i < points.length; i++) {
         if (!ui.isPointInside(points[i].vector.x, points[i].vector.y)) {
@@ -293,8 +304,9 @@ function renderPool(points) {
             if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) <
                 15 ||
                 dist(mouseX, mouseY, point_1.vector.x, point_1.vector.y) < 15) {
-                fill('azure');
+                fill('red');
                 ellipse(points[i].vector.x, points[i].vector.y, 10, 10);
+                stroke('red');
             }
             else {
                 strokeWeight(1);
@@ -316,7 +328,7 @@ function renderPool(points) {
             pop();
         }
         if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) < 15) {
-            fill('azure');
+            fill('red');
             ellipse(points[i].vector.x, points[i].vector.y, 15, 15);
         }
     }

@@ -89,8 +89,9 @@ function renderPool(points: Individual[]) {
                     15 ||
                 dist(mouseX, mouseY, point.vector.x, point.vector.y) < 15
             ) {
-                fill('azure')
+                fill('red')
                 ellipse(points[i].vector.x, points[i].vector.y, 10, 10)
+                stroke('red')
             } else {
                 strokeWeight(1)
                 stroke('rgba(50,50,50,0.1)') // normal color
@@ -122,7 +123,7 @@ function renderPool(points: Individual[]) {
         }
 
         if (dist(mouseX, mouseY, points[i].vector.x, points[i].vector.y) < 15) {
-            fill('azure')
+            fill('red')
             ellipse(points[i].vector.x, points[i].vector.y, 15, 15)
         }
     }
