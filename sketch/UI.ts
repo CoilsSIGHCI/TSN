@@ -10,6 +10,7 @@ type FunctionButtonRender = FunctionButton & {
 class UI {
     buttons: FunctionButtonRender[]
     frame: [number, number, number, number] = [30, 30, 400, 300]
+    serialPromptFrame: [number, number, number, number] = [30, 400, 400, 200]
 
     // random color for the avatar (HSB color mode)
     avatarColor: string = this.getRandomAvatarColor()
@@ -21,6 +22,9 @@ class UI {
 
     id: number = this.getRandomID()
     verified = false
+
+    clickDebounce = 0
+    clickDebounceLock = 0
 
     constructor() {
         this.buttons = [
@@ -239,7 +243,14 @@ class UI {
                 mouseY > buttonY &&
                 mouseY < buttonY + buttonHeight
             ) {
-                this.buttons[i].onClick()
+                // debounce
+                if (this.clickDebounce === 0) {
+                    this.clickDebounce = 1
+                    this.buttons[i].onClick()
+                }
+                setTimeout(() => {
+                    this.clickDebounce = 0
+                }, 500)
             }
         }
     }
@@ -282,6 +293,90 @@ class UI {
         return
     }
 
+    // Draw serial device connection prompt dialog
+    drawSerialPrompt() {
+        push()
+        // draw a modal dialog
+        fill(255)
+        strokeWeight(0)
+        rect(...this.serialPromptFrame, 10)
+
+        // draw text
+        fill(0)
+        textAlign(LEFT, TOP)
+        textSize(20)
+        text(
+            'TSN Device',
+            this.serialPromptFrame[0] + 30,
+            this.serialPromptFrame[1] + 30
+        )
+
+        // draw connect button
+        fill(80)
+        rect(
+            this.serialPromptFrame[0] + this.serialPromptFrame[2] - 130,
+            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 70,
+            100,
+            40,
+            20
+        )
+
+        fill(255)
+        textAlign(CENTER, CENTER)
+        text(
+            'Connect',
+            this.serialPromptFrame[0] + this.serialPromptFrame[2] - 80,
+            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 50
+        )
+
+        // click event
+        if (
+            mouseIsPressed &&
+            mouseX >
+                this.serialPromptFrame[0] + this.serialPromptFrame[2] - 130 &&
+            mouseX <
+                this.serialPromptFrame[0] + this.serialPromptFrame[2] - 30 &&
+            mouseY >
+                this.serialPromptFrame[1] + this.serialPromptFrame[3] - 70 &&
+            mouseY < this.serialPromptFrame[1] + this.serialPromptFrame[3] - 30
+        ) {
+            // debounce
+            if (this.clickDebounce === 0) {
+                this.clickDebounce = 1
+                device.connect().then(() => {
+                    this.clickDebounce = 0
+                    device.read()
+                })
+                console.log('Connecting to serial device')
+            }
+        }
+
+        // print serial device output
+        device.connections().map((connection, index) => {
+            fill(210)
+            rect(
+                this.serialPromptFrame[0] + 40,
+                this.serialPromptFrame[1] + 37 + 30 * (index + 1),
+                100,
+                26,
+                13
+            )
+            fill(0)
+            textAlign(LEFT, CENTER)
+            text(
+                connection[0],
+                this.serialPromptFrame[0] + 50,
+                this.serialPromptFrame[1] + 50 + 30 * (index + 1)
+            )
+            text(
+                connection[1],
+                this.serialPromptFrame[0] + 100,
+                this.serialPromptFrame[1] + 50 + 30 * (index + 1)
+            )
+        })
+        pop()
+    }
+
     // create p5.js rect
     render() {
         // draw frame
@@ -298,5 +393,8 @@ class UI {
 
         // draw visibility button
         this.drawVisibilityButton()
+
+        // draw serial prompt
+        this.drawSerialPrompt()
     }
 }

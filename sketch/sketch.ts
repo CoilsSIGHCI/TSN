@@ -3,6 +3,8 @@ let numberOfShapesControl: p5.Element
 const points: Individual[] = []
 
 let ui: UI
+let device: TSNDevice
+
 // P5 WILL AUTOMATICALLY USE GLOBAL MODE IF A DRAW() FUNCTION IS DEFINED
 function setup() {
     console.log('🚀 - Setup initialized - P5 is running')
@@ -12,6 +14,7 @@ function setup() {
     noFill().frameRate(60)
 
     ui = new UI()
+    device = new TSNDevice()
 
     for (let i = 0; i < numberOfShapes; i++) {
         let x, y, status
