@@ -52,18 +52,25 @@ int a, b, i, r, connectionCount;
 void loop() {
   connectionCount = 0;
   for (a = 0; a < 16; a++) {
-    for (b = a; b < 16; b++) {
+    for (b = 0; b < 16; b++) {
       r = checkConnection(a, b);
       if (r) {
         connections[connectionCount].node0 = a;
         connections[connectionCount].node1 = b;
         connectionCount++;
+
+        analogWrite(mux0.comPin, 128);
+        pinMode(mux1.comPin, OUTPUT);
+        digitalWrite(mux1.comPin, HIGH);
+        delay(100);
+        pinMode(mux1.comPin, INPUT_PULLUP);
       }
     }
   }
 
   Serial.print(F("["));
-  for (int I = 0; I < connectionCount; I++) {
+  int I;
+  for (I = 0; I < connectionCount; I++) {
     Serial.print(F("{"));
     Serial.print(F("\"0\": "));
     Serial.print(connections[I].node0);
@@ -76,7 +83,7 @@ void loop() {
   }
   Serial.println(F("]"));
 
-  delay(5000);
+  delay(100);
 }
 
 void selectChannel(CD4051BConfig mux, int chnl) {
@@ -92,8 +99,11 @@ void writeChannel(CD4051BConfig mux, int chnl, char lev) {
 
 int readChannel(CD4051BConfig mux, int chnl) {
   selectChannel(mux, chnl);
-
-  return !digitalRead(mux.comPin);
+  int read = analogRead(mux.comPin);
+  if (read < 400) {
+    Serial.println(read);
+  }
+  return read < 400;
 }
 
 int checkConnection(int node0, int node1) {
