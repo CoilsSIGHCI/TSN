@@ -1,9 +1,12 @@
 // GLOBAL VARS & TYPES
 let numberOfShapesControl: p5.Element
-const points: Individual[] = []
+const pool = new Pool()
 
 let ui: UI
 let device: TSNDevice
+
+let tick = 0
+let growthTicks = 180
 
 // P5 WILL AUTOMATICALLY USE GLOBAL MODE IF A DRAW() FUNCTION IS DEFINED
 function setup() {
@@ -23,7 +26,7 @@ function setup() {
             y = random(0, height)
         } while (ui.isPointInside(x, y))
 
-        points.push(new Individual(createVector(x, y)))
+        pool.points.push(new Individual(createVector(x, y)))
     }
 
     ui.enableUpdate()
@@ -41,7 +44,16 @@ function draw() {
 
     const functions = ui.buttons
 
-    renderPool(points)
+    // Grow
+    if (tick === growthTicks) {
+        pool.points.forEach((point) => {
+            point.grow()
+        })
+        tick = 0
+        
+    }
+
+    pool.renderPool()
 
     ui.render()
 }

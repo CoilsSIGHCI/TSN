@@ -22,4 +22,8 @@ class Individual {
         this.verified = random() < 0.1
         this.vector = vector
     }
+
+    grow() {
+        
+    }
 }
