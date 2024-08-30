@@ -1,3 +1,5 @@
+import { TSNDevice } from './hardware'
+
 type FunctionButton = {
     name: string
     onClick: () => void
@@ -7,7 +9,7 @@ type FunctionButtonRender = FunctionButton & {
     lines?: number[][]
 }
 
-class UI {
+export class UI {
     buttons: FunctionButtonRender[]
     frame: [number, number, number, number] = [30, 30, 400, 300]
     serialPromptFrame: [number, number, number, number] = [30, 400, 400, 200]
@@ -131,7 +133,7 @@ class UI {
         buttonHeight: number,
         sketchyLines = 2,
         overshoot = 3,
-        dithering = 2
+        dithering = 2,
     ) {
         if (lines.length === 0) {
             for (let j = 0; j < sketchyLines; j++) {
@@ -224,7 +226,7 @@ class UI {
                 buttonX,
                 buttonY,
                 buttonWidth,
-                buttonHeight
+                buttonHeight,
             )
 
             fill(0)
@@ -232,7 +234,7 @@ class UI {
             text(
                 this.buttons[i].name,
                 buttonX + buttonWidth / 2,
-                buttonY + buttonHeight / 2
+                buttonY + buttonHeight / 2,
             ) // center the text
 
             // click event
@@ -269,7 +271,7 @@ class UI {
             buttonX,
             buttonY,
             buttonSize,
-            buttonSize
+            buttonSize,
         )
 
         fill(0)
@@ -295,6 +297,8 @@ class UI {
 
     // Draw serial device connection prompt dialog
     drawSerialPrompt() {
+        const device = TSNDevice.getInstance()
+
         push()
         // draw a modal dialog
         fill(255)
@@ -308,7 +312,7 @@ class UI {
         text(
             'TSN Device',
             this.serialPromptFrame[0] + 30,
-            this.serialPromptFrame[1] + 30
+            this.serialPromptFrame[1] + 30,
         )
 
         // draw connect button
@@ -318,7 +322,7 @@ class UI {
             this.serialPromptFrame[1] + this.serialPromptFrame[3] - 70,
             100,
             40,
-            20
+            20,
         )
 
         fill(255)
@@ -326,7 +330,7 @@ class UI {
         text(
             'Connect',
             this.serialPromptFrame[0] + this.serialPromptFrame[2] - 80,
-            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 50
+            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 50,
         )
 
         // click event
@@ -359,19 +363,19 @@ class UI {
                 this.serialPromptFrame[1] + 37 + 30 * (index + 1),
                 100,
                 26,
-                13
+                13,
             )
             fill(0)
             textAlign(LEFT, CENTER)
             text(
                 connection[0],
                 this.serialPromptFrame[0] + 50,
-                this.serialPromptFrame[1] + 50 + 30 * (index + 1)
+                this.serialPromptFrame[1] + 50 + 30 * (index + 1),
             )
             text(
                 connection[1],
                 this.serialPromptFrame[0] + 100,
-                this.serialPromptFrame[1] + 50 + 30 * (index + 1)
+                this.serialPromptFrame[1] + 50 + 30 * (index + 1),
             )
         })
         pop()

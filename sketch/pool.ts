@@ -1,17 +1,52 @@
-class Pool {
+import { Individual } from './individual'
+import { TSNDevice, Connection } from './hardware'
+import { UI } from './ui'
+
+export class Pool {
     points: Individual[] = []
+    device: TSNDevice
 
     constructor(points: Individual[] = []) {
         this.points = points
+        this.device = TSNDevice.getInstance()
     }
 
-    renderPool() {
+    async updateConnections() {
+            const hardwareConnections = this.device.connections();
+
+            // Update connections based on hardware data
+            hardwareConnections.forEach((conn, index) => {
+                if (this.points[conn[0]] && this.points[conn[1]]) {
+                    this.updateIndividualConnections(this.points[conn[0]], this.points[conn[1]], index);
+                    this.updateIndividualConnections(this.points[conn[1]], this.points[conn[0]], index);
+                }
+            });
+
+            // Remove excess connections if hardware connections decreased
+            this.points.forEach(point => {
+                if (point.connections.length > hardwareConnections.length) {
+                    point.connections.length = hardwareConnections.length;
+                }
+            });
+        }
+
+        private updateIndividualConnections(individual: Individual, connection: Individual, index: number) {
+            if (index < individual.connections.length) {
+                // Update existing connection
+                individual.connections[index] = connection;
+            } else {
+                // Add new connection
+                individual.connections.push(connection);
+            }
+        }
+
+    renderPool(ui: UI) {
         // MOVE THE POINTS IF IT IS INSIDE THE FRAME
         for (let i = 0; i < this.points.length; i++) {
             if (
                 !ui.isPointInside(
                     this.points[i].vector.x,
-                    this.points[i].vector.y
+                    this.points[i].vector.y,
                 )
             ) {
                 break
@@ -59,7 +94,7 @@ class Pool {
                 UI.verifiedBadge(
                     this.points[i].vector.x + 12,
                     this.points[i].vector.y,
-                    10
+                    10,
                 )
             }
         }
@@ -68,7 +103,7 @@ class Pool {
         function distance(point1: Individual, point2: Individual) {
             return Math.sqrt(
                 Math.pow(point1.vector.x - point2.vector.x, 2) +
-                    Math.pow(point1.vector.y - point2.vector.y, 2)
+                    Math.pow(point1.vector.y - point2.vector.y, 2),
             )
         }
         let lines: Array<string> = []
@@ -105,7 +140,7 @@ class Pool {
                         mouseX,
                         mouseY,
                         this.points[i].vector.x,
-                        this.points[i].vector.y
+                        this.points[i].vector.y,
                     ) < 15 ||
                     dist(mouseX, mouseY, point.vector.x, point.vector.y) < 15
                 ) {
@@ -114,7 +149,7 @@ class Pool {
                         this.points[i].vector.x,
                         this.points[i].vector.y,
                         10,
-                        10
+                        10,
                     )
                     stroke('red')
                 } else {
@@ -142,7 +177,7 @@ class Pool {
                     this.points[i].vector.x,
                     this.points[i].vector.y,
                     point.vector.x,
-                    point.vector.y
+                    point.vector.y,
                 )
                 pop()
             }
@@ -152,7 +187,7 @@ class Pool {
                     mouseX,
                     mouseY,
                     this.points[i].vector.x,
-                    this.points[i].vector.y
+                    this.points[i].vector.y,
                 ) < 15
             ) {
                 fill('red')
@@ -160,7 +195,7 @@ class Pool {
                     this.points[i].vector.x,
                     this.points[i].vector.y,
                     15,
-                    15
+                    15,
                 )
             }
         }

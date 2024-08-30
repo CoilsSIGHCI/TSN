@@ -1,9 +1,12 @@
+import { Pool } from './pool'
+import { Individual } from './individual'
+import { UI } from './ui'
+
 // GLOBAL VARS & TYPES
 let numberOfShapesControl: p5.Element
 const pool = new Pool()
 
 let ui: UI
-let device: TSNDevice
 
 let tick = 0
 let growthTicks = 180
@@ -17,7 +20,6 @@ function setup() {
     noFill().frameRate(60)
 
     ui = new UI()
-    device = new TSNDevice()
 
     for (let i = 0; i < numberOfShapes; i++) {
         let x, y, status
@@ -50,10 +52,9 @@ function draw() {
             point.grow()
         })
         tick = 0
-        
     }
 
-    pool.renderPool()
+    pool.renderPool(ui)
 
     ui.render()
 }
