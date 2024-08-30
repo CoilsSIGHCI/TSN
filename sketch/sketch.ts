@@ -1,6 +1,6 @@
 import { Pool } from './pool'
 import { Individual } from './individual'
-import { UI } from './ui'
+import { UI } from './UI'
 
 // GLOBAL VARS & TYPES
 let numberOfShapesControl: p5.Element

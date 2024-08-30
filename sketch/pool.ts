@@ -1,6 +1,6 @@
 import { Individual } from './individual'
 import { TSNDevice, Connection } from './hardware'
-import { UI } from './ui'
+import { UI } from './UI'
 
 export class Pool {
     points: Individual[] = []
