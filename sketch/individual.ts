@@ -1,7 +1,4 @@
-import { AIConnector } from './ai'
-import { Message, MessageProperty } from './message'
-
-export type IndividualPersonality = {
+type IndividualPersonality = {
     openness: number
     conscientiousness: number
     extraversion: number
@@ -9,21 +6,23 @@ export type IndividualPersonality = {
     neuroticism: number
 }
 
-export type FlaggedMessage = Message & {
+type FlaggedMessage = Message & {
     read: boolean
 }
 
-export class Individual {
+class Individual {
     personality: IndividualPersonality
     verified: boolean
     vector: p5.Vector
     inbox: Array<FlaggedMessage> = []
     connections: Array<Individual> = []
+    clusterId: number
 
     constructor(
         vector: p5.Vector,
         verified?: boolean,
         personality?: IndividualPersonality,
+        clusterId?: number
     ) {
         this.personality = personality || {
             openness: random(0, 1),
@@ -34,6 +33,7 @@ export class Individual {
         }
         this.verified = verified ?? random() < 0.1
         this.vector = vector
+        this.clusterId = clusterId ?? 0
     }
 
     grow() {
@@ -107,7 +107,7 @@ export class Individual {
 
         const topic = originalMessage
             ? originalMessage.topic
-            : AIConnector.getInstance().getNewTopic()
+            : ''
 
         return new Message(this, property, topic)
     }

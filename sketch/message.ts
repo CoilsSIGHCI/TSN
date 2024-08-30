@@ -1,13 +1,10 @@
-import { AIConnector } from './ai'
-import { Individual, FlaggedMessage } from './individual'
-
-export type MessageProperty = {
+type MessageProperty = {
     aggressive: number
     integrity: number
     attractive: number
 }
 
-export class Message {
+class Message {
     sender: Individual
     property: MessageProperty
     topic: string

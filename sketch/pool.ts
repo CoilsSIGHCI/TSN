@@ -1,203 +1,237 @@
-import { Individual } from './individual'
-import { TSNDevice, Connection } from './hardware'
-import { UI } from './UI'
+type ClusterProperty = {
+    size: number
+    center: p5.Vector
+    enabled: boolean
+}
+type ClusterSizeTable = {
+    [key: number]: ClusterProperty
+}
 
-export class Pool {
+class Pool {
     points: Individual[] = []
-    device: TSNDevice
+    clusters: ClusterSizeTable = {}
 
-    constructor(points: Individual[] = []) {
-        this.points = points
-        this.device = TSNDevice.getInstance()
+    constructor(clusters: ClusterSizeTable) {
+        this.clusters = clusters
+        this.initializeClusters()
+    }
+
+    initializeClusters() {
+        for (const [clusterId, property] of Object.entries(this.clusters)) {
+            const id = parseInt(clusterId)
+            const clusterPoints: Individual[] = []
+
+            for (let i = 0; i < property.size; i++) {
+                const theta = random(0, TWO_PI);
+                const radius = random(0, 0.002 * property.size);
+                const offset = createVector(
+                    radius * cos(theta),
+                    radius * sin(theta)
+                );
+                const position = p5.Vector.add(property.center, offset)
+                const newIndividual = new Individual(position, undefined, undefined, id)
+                this.points.push(newIndividual)
+                clusterPoints.push(newIndividual)
+            }
+
+            // Create internal connections based on distance
+            this.createInternalConnectionsByDistance(clusterPoints)
+        }
     }
 
     async updateConnections() {
-            const hardwareConnections = this.device.connections();
+        const hardwareConnections = TSNDevice.getInstance().connections();
 
-            // Update connections based on hardware data
-            hardwareConnections.forEach((conn, index) => {
-                if (this.points[conn[0]] && this.points[conn[1]]) {
-                    this.updateIndividualConnections(this.points[conn[0]], this.points[conn[1]], index);
-                    this.updateIndividualConnections(this.points[conn[1]], this.points[conn[0]], index);
+        console.log(hardwareConnections);
+
+        // Clear all existing inter-cluster connections
+        this.points.forEach(point => {
+            point.connections = point.connections.filter(conn => conn.clusterId === point.clusterId);
+        });
+
+        // Update connections based on hardware data
+        hardwareConnections.forEach((conn) => {
+            const cluster1Id = conn[0];
+            const cluster2Id = conn[1];
+
+            if (this.clusters[cluster1Id] && this.clusters[cluster2Id]) {
+                this.createRandomConnectionsBetweenClusters(cluster1Id, cluster2Id);
+            }
+        });
+    }
+
+    private createInternalConnectionsByDistance(clusterPoints: Individual[]) {
+        const maxConnections = 3; // Maximum number of connections per individual
+        const connectionThreshold = 0.03 * min(screenX, screenY); // Adjust this value to control the connection distance
+
+        for (let i = 0; i < clusterPoints.length; i++) {
+            const point = clusterPoints[i];
+            const distances = clusterPoints
+                .map((p, index) => ({ index, distance: p5.Vector.dist(point.vector, p.vector) }))
+                .filter(d => d.index !== i) // Exclude self
+                .sort((a, b) => a.distance - b.distance); // Sort by distance
+
+            let connectionCount = 0;
+            for (const { index, distance } of distances) {
+                if (connectionCount >= maxConnections) break;
+                if (distance <= connectionThreshold) {
+                    const otherPoint = clusterPoints[index];
+                    if (!point.connections.includes(otherPoint)) {
+                        this.updateIndividualConnections(point, otherPoint);
+                        this.updateIndividualConnections(otherPoint, point);
+                        connectionCount++;
+                    }
+                } else {
+                    break; // Stop if distance exceeds threshold
                 }
-            });
-
-            // Remove excess connections if hardware connections decreased
-            this.points.forEach(point => {
-                if (point.connections.length > hardwareConnections.length) {
-                    point.connections.length = hardwareConnections.length;
-                }
-            });
-        }
-
-        private updateIndividualConnections(individual: Individual, connection: Individual, index: number) {
-            if (index < individual.connections.length) {
-                // Update existing connection
-                individual.connections[index] = connection;
-            } else {
-                // Add new connection
-                individual.connections.push(connection);
             }
         }
+    }
+
+    private createRandomConnectionsBetweenClusters(cluster1Id: number, cluster2Id: number) {
+        const points1 = this.points.filter(p => p.clusterId === cluster1Id);
+        const points2 = this.points.filter(p => p.clusterId === cluster2Id);
+
+        if (points1.length === 0 || points2.length === 0) return;
+
+        const connectionCount = Math.floor(random(
+            min(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size),
+            max(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size)
+        ) * 0.6);
+
+        for (let i = 0; i < connectionCount; i++) {
+            const point1 = random(points1);
+            const point2 = random(points2);
+
+            this.updateIndividualConnections(point1, point2);
+            this.updateIndividualConnections(point2, point1);
+        }
+    }
+
+    private updateIndividualConnections(individual: Individual, connection: Individual) {
+        if (!individual.connections.includes(connection)) {
+            individual.connections.push(connection);
+        }
+    }
 
     renderPool(ui: UI) {
-        // MOVE THE POINTS IF IT IS INSIDE THE FRAME
-        for (let i = 0; i < this.points.length; i++) {
-            if (
-                !ui.isPointInside(
-                    this.points[i].vector.x,
-                    this.points[i].vector.y,
-                )
-            ) {
-                break
-            }
-            // x axis
-            if (this.points[i].vector.x < ui.frame[0]) {
-                this.points[i].vector.x += 2
-            } else if (this.points[i].vector.x > ui.frame[0] + ui.frame[2]) {
-                this.points[i].vector.x -= 2
-            }
-            // y axis
-            if (this.points[i].vector.y < ui.frame[1]) {
-                this.points[i].vector.y += 2
-            } else if (this.points[i].vector.y > ui.frame[1] + ui.frame[3]) {
-                this.points[i].vector.y -= 2
+        this.updateClusterForces();
+
+        // Draw clusters
+        for (const clusterId in this.clusters) {
+            const cluster = this.clusters[clusterId];
+            if (cluster.enabled) {
+                noFill();
+                stroke('rgba(100,100,100,0.2)');
+                const screenX = cluster.center.x * width;
+                const screenY = cluster.center.y * height;
+                ellipse(screenX, screenY, 5*cluster.size, 5*cluster.size);
             }
         }
 
-        // OR OUTSIDE OF THE CANVAS
+        // Draw individuals and connections
         for (let i = 0; i < this.points.length; i++) {
-            if (this.points[i].vector.x < 0) {
-                this.points[i].vector.x += 2
-            } else if (this.points[i].vector.x > width) {
-                this.points[i].vector.x -= 2
-            }
-            if (this.points[i].vector.y < 0) {
-                this.points[i].vector.y += 2
-            } else if (this.points[i].vector.y > height) {
-                this.points[i].vector.y -= 2
-            }
-        }
+            const point = this.points[i];
+            if (this.clusters[point.clusterId].enabled) {
+                // Draw individual
+                stroke('rgba(0,0,0,0)');
+                fill(`rgba(${(point.clusterId * 50) % 255},${(point.clusterId * 100) % 255},${(point.clusterId * 150) % 255},0.8)`);
+                const screenX = point.vector.x * width;
+                const screenY = point.vector.y * height;
+                ellipse(screenX, screenY, 10, 10);
 
-        // SHIFT THE POSITION OF THE POINTS SLIGHTLY
-        for (let i = 0; i < this.points.length; i++) {
-            this.points[i].vector.x += random(-0.5, 0.5)
-            this.points[i].vector.y += random(-0.5, 0.5)
-        }
-
-        // DRAW FLOATING POINTS
-        for (let i = 0; i < this.points.length; i++) {
-            stroke('rgba(0,0,0,0)')
-            fill('rgba(0,0,0,0.8)')
-            ellipse(this.points[i].vector.x, this.points[i].vector.y, 10, 10)
-            if (this.points[i].verified) {
-                UI.verifiedBadge(
-                    this.points[i].vector.x + 12,
-                    this.points[i].vector.y,
-                    10,
-                )
-            }
-        }
-
-        // Function to calculate distance between two points
-        function distance(point1: Individual, point2: Individual) {
-            return Math.sqrt(
-                Math.pow(point1.vector.x - point2.vector.x, 2) +
-                    Math.pow(point1.vector.y - point2.vector.y, 2),
-            )
-        }
-        let lines: Array<string> = []
-
-        // DRAW LINES BETWEEN FLOATING POINTS
-        for (let i = 0; i < this.points.length; i++) {
-            // Calculate distances to all other points
-            let distances = []
-            for (let j = 0; j < this.points.length; j++) {
-                if (this.points[j].verified && this.points[i].verified) {
-                    continue
+                if (point.verified) {
+                    UI.verifiedBadge(screenX + 12, screenY, 10);
                 }
-                if (i != j) {
-                    distances.push({
-                        index: j,
-                        distance: distance(this.points[i], this.points[j]),
-                    })
-                }
-            }
 
-            // Sort by distance
-            distances.sort((a, b) => a.distance - b.distance)
-
-            // Connect to nearest x points
-            let x = this.points[i].personality.extraversion * 20 // Change this to connect to more or fewer points
-            if (this.points[i].verified) {
-                x *= 3
+                // Draw connections
+                this.drawConnections(point);
             }
-            for (let j = 0; j < x && j < distances.length; j++) {
-                let point = this.points[distances[j].index]
-                // check if mouse is hovering over the point
-                if (
-                    dist(
-                        mouseX,
-                        mouseY,
-                        this.points[i].vector.x,
-                        this.points[i].vector.y,
-                    ) < 15 ||
-                    dist(mouseX, mouseY, point.vector.x, point.vector.y) < 15
-                ) {
-                    fill('red')
-                    ellipse(
-                        this.points[i].vector.x,
-                        this.points[i].vector.y,
-                        10,
-                        10,
-                    )
-                    stroke('red')
+        }
+    }
+
+    private updateClusterForces() {
+        const clusterAttractionStrength = 0.0000; // Strength of attraction to cluster center
+        const clusterRepulsionStrength = 0.0000; // Strength of repulsion from other cluster centers
+        const connectionAttractionStrength = 0.00001; // Strength of attraction between connected individuals
+        const clusterBoundaryForce = 0.00001; // Strength of force keeping elements within cluster
+        const clusterRadius = 0.5; // Radius of the cluster (adjust as needed)
+
+        for (const point of this.points) {
+            const cluster = this.clusters[point.clusterId];
+            if (cluster.enabled) {
+                // Vector from cluster center to point
+                const toPoint = createVector(
+                    point.vector.x - cluster.center.x,
+                    point.vector.y - cluster.center.y
+                );
+                const distanceFromCenter = toPoint.mag();
+
+                // Attraction to cluster center
+                let attractionForce = toPoint.copy().mult(-1);
+                if (distanceFromCenter > clusterRadius) {
+                    // Apply stronger force if point is outside cluster radius
+                    attractionForce.setMag(clusterBoundaryForce * (distanceFromCenter - clusterRadius));
                 } else {
-                    strokeWeight(1)
-                    stroke('rgba(50,50,50,0.1)') // normal color
+                    attractionForce.setMag(clusterAttractionStrength);
+                }
+                point.vector.add(attractionForce);
+
+                // Repulsion from other clusters
+                for (const otherId in this.clusters) {
+                    const otherCluster = this.clusters[parseInt(otherId)];
+                    if (parseInt(otherId) !== point.clusterId && otherCluster.enabled) {
+                        const repulsionForce = createVector(
+                            point.vector.x - otherCluster.center.x,
+                            point.vector.y - otherCluster.center.y
+                        );
+                        const distance = repulsionForce.mag();
+                        repulsionForce.setMag((1 / (distance * distance)) * clusterRepulsionStrength);
+                        point.vector.add(repulsionForce);
+                    }
                 }
 
-                // draw single-directional line or bi-directional line
-                push()
-                let lineKey = `${i}-${distances[j].index}`
-                let reverseLineKey = `${distances[j].index}-${i}`
-                if (
-                    !this.points[i].verified &&
-                    (lines.indexOf(lineKey) !== -1 ||
-                        lines.indexOf(reverseLineKey) !== -1)
-                ) {
-                    // draw bi-directional line
-                    strokeWeight(2)
-                    stroke('rgba(0, 0, 0, .2)') // color for bi-directional line
-                } else {
-                    // draw single-directional line
-                    lines.push(lineKey)
+                // Attraction to connected individuals (including inter-cluster connections)
+                for (const connectedPoint of point.connections) {
+                    const connectionForce = createVector(
+                        connectedPoint.vector.x - point.vector.x,
+                        connectedPoint.vector.y - point.vector.y
+                    );
+                    connectionForce.setMag(connectionAttractionStrength);
+                    point.vector.add(connectionForce);
                 }
-                line(
-                    this.points[i].vector.x,
-                    this.points[i].vector.y,
-                    point.vector.x,
-                    point.vector.y,
-                )
-                pop()
-            }
 
-            if (
-                dist(
-                    mouseX,
-                    mouseY,
-                    this.points[i].vector.x,
-                    this.points[i].vector.y,
-                ) < 15
-            ) {
-                fill('red')
-                ellipse(
-                    this.points[i].vector.x,
-                    this.points[i].vector.y,
-                    15,
-                    15,
-                )
+                // Add some random movement (in proportion)
+                point.vector.x += (random(-0.5, 0.5) * 0.0001);
+                point.vector.y += (random(-0.5, 0.5) * 0.0001);
+
+                // Ensure the point stays within the cluster bounds
+                const finalToPoint = createVector(
+                    point.vector.x - cluster.center.x,
+                    point.vector.y - cluster.center.y
+                );
+                if (finalToPoint.mag() > clusterRadius) {
+                    finalToPoint.setMag(clusterRadius);
+                    point.vector.x = cluster.center.x + finalToPoint.x;
+                    point.vector.y = cluster.center.y + finalToPoint.y;
+                }
+
+                // Ensure the point stays within the screen bounds
+                point.vector.x = constrain(point.vector.x, 0, 1);
+                point.vector.y = constrain(point.vector.y, 0, 1);
             }
+        }
+    }
+
+    private drawConnections(point: Individual) {
+        for (let i = 0; i < point.connections.length; i++) {
+            const otherPoint = point.connections[i];
+            const alpha = 0.5 - i * 0.1; // Decrease opacity for each subsequent connection
+            stroke(`rgba(100,100,100,${alpha > 0 ? alpha : 0.1})`);
+            line(
+                point.vector.x * width, point.vector.y * height,
+                otherPoint.vector.x * width, otherPoint.vector.y * height
+            );
         }
     }
 }

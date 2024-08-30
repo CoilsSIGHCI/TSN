@@ -1,5 +1,3 @@
-import { TSNDevice } from './hardware'
-
 type FunctionButton = {
     name: string
     onClick: () => void

@@ -1,9 +1,9 @@
-export type Connection = {
+type Connection = {
     0: number
     1: number
 }
 
-export class TSNDevice {
+class TSNDevice {
     private port: any | null
     private outputStream: WritableStream<string> | null
     private inputStream: ReadableStream<string> | null

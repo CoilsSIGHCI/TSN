@@ -100,9 +100,7 @@ void writeChannel(CD4051BConfig mux, int chnl, char lev) {
 int readChannel(CD4051BConfig mux, int chnl) {
   selectChannel(mux, chnl);
   int read = analogRead(mux.comPin);
-  if (read < 400) {
-    Serial.println(read);
-  }
+  
   return read < 400;
 }
 
