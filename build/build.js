@@ -95,9 +95,7 @@ class Individual {
             integrity: this.calculateIntegrity(originalMessage),
             attractive: this.calculateAttractiveness(originalMessage),
         };
-        const topic = originalMessage
-            ? originalMessage.topic
-            : '';
+        const topic = originalMessage ? originalMessage.topic : '';
         return new Message(this, property, topic);
     }
     calculateAggressiveness(message) {
@@ -196,8 +194,8 @@ class Pool {
     async updateConnections() {
         const hardwareConnections = TSNDevice.getInstance().connections();
         console.log(hardwareConnections);
-        this.points.forEach(point => {
-            point.connections = point.connections.filter(conn => conn.clusterId === point.clusterId);
+        this.points.forEach((point) => {
+            point.connections = point.connections.filter((conn) => conn.clusterId === point.clusterId);
         });
         hardwareConnections.forEach((conn) => {
             const cluster1Id = conn[0];
@@ -213,8 +211,11 @@ class Pool {
         for (let i = 0; i < clusterPoints.length; i++) {
             const point = clusterPoints[i];
             const distances = clusterPoints
-                .map((p, index) => ({ index, distance: p5.Vector.dist(point.vector, p.vector) }))
-                .filter(d => d.index !== i)
+                .map((p, index) => ({
+                index,
+                distance: p5.Vector.dist(point.vector, p.vector),
+            }))
+                .filter((d) => d.index !== i)
                 .sort((a, b) => a.distance - b.distance);
             let connectionCount = 0;
             for (const { index, distance } of distances) {
@@ -235,8 +236,8 @@ class Pool {
         }
     }
     createRandomConnectionsBetweenClusters(cluster1Id, cluster2Id) {
-        const points1 = this.points.filter(p => p.clusterId === cluster1Id);
-        const points2 = this.points.filter(p => p.clusterId === cluster2Id);
+        const points1 = this.points.filter((p) => p.clusterId === cluster1Id);
+        const points2 = this.points.filter((p) => p.clusterId === cluster2Id);
         if (points1.length === 0 || points2.length === 0)
             return;
         const connectionCount = Math.floor(random(min(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size), max(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size)) * 0.6);
@@ -294,7 +295,8 @@ class Pool {
                 const distanceFromCenter = toPoint.mag();
                 let attractionForce = toPoint.copy().mult(-1);
                 if (distanceFromCenter > 0.2) {
-                    attractionForce.setMag(clusterBoundaryForce * (distanceFromCenter - clusterRadius));
+                    attractionForce.setMag(clusterBoundaryForce *
+                        (distanceFromCenter - clusterRadius));
                 }
                 else {
                     attractionForce.setMag(clusterAttractionStrength);
@@ -302,10 +304,12 @@ class Pool {
                 point.vector.add(attractionForce);
                 for (const otherId in this.clusters) {
                     const otherCluster = this.clusters[parseInt(otherId)];
-                    if (parseInt(otherId) !== point.clusterId && otherCluster.enabled) {
+                    if (parseInt(otherId) !== point.clusterId &&
+                        otherCluster.enabled) {
                         const repulsionForce = createVector(point.vector.x - otherCluster.center.x, point.vector.y - otherCluster.center.y);
                         const distance = repulsionForce.mag();
-                        repulsionForce.setMag((1 / (distance * distance)) * clusterRepulsionStrength);
+                        repulsionForce.setMag((1 / (distance * distance)) *
+                            clusterRepulsionStrength);
                         point.vector.add(repulsionForce);
                     }
                 }
@@ -315,14 +319,16 @@ class Pool {
                     point.vector.add(connectionForce);
                 }
                 for (const otherPoint of this.points) {
-                    if (otherPoint !== point && p5.Vector.dist(point.vector, otherPoint.vector) < individualDistanceThreshold) {
+                    if (otherPoint !== point &&
+                        p5.Vector.dist(point.vector, otherPoint.vector) <
+                            individualDistanceThreshold) {
                         const strongRepulsionForce = createVector(point.vector.x - otherPoint.vector.x, point.vector.y - otherPoint.vector.y);
                         strongRepulsionForce.setMag(individualRepulsionStrength);
                         point.vector.add(strongRepulsionForce);
                     }
                 }
-                point.vector.x += (random(-0.5, 0.5) * 0.0001);
-                point.vector.y += (random(-0.5, 0.5) * 0.0001);
+                point.vector.x += random(-0.5, 0.5) * 0.0001;
+                point.vector.y += random(-0.5, 0.5) * 0.0001;
                 const finalToPoint = createVector(point.vector.x - cluster.center.x, point.vector.y - cluster.center.y);
                 if (finalToPoint.mag() > clusterRadius) {
                     finalToPoint.setMag(clusterRadius);
@@ -355,28 +361,28 @@ function setup() {
         0: {
             size: 10,
             center: createVector(0.1, 0.8),
-            enabled: true
+            enabled: true,
         },
         1: {
             size: 20,
             center: createVector(0.8, 0.3),
-            enabled: true
+            enabled: true,
         },
         2: {
             size: 40,
             center: createVector(0.3, 0.8),
-            enabled: true
+            enabled: true,
         },
         3: {
             size: 20,
             center: createVector(0.4, 0.2),
-            enabled: true
+            enabled: true,
         },
         4: {
             size: 100,
             center: createVector(0.5, 0.5),
-            enabled: true
-        }
+            enabled: true,
+        },
     };
     pool = new Pool(clusterSizeTable);
     createCanvas(windowWidth, windowHeight);
@@ -390,7 +396,7 @@ function draw() {
     background(234);
     if (tick === growthTicks) {
         pool.updateConnections();
-        console.log("update");
+        console.log('update');
         pool.points.forEach((point) => {
             point.grow();
         });
@@ -404,15 +410,18 @@ class UI {
     constructor() {
         this.frame = [30, 30, 40, 60];
         this.clickDebounce = 0;
+        this.panelStack = [];
         this.appUI = new AppUI([50, 50, 400, 300]);
         this.serialPrompt = new SerialPrompt([50, 50, 300, 200]);
         this.appUI.enableUpdate();
+        this.panelStack.push(this.appUI, this.serialPrompt);
     }
     drawToggleButton(target, index) {
+        var _a;
         const buttonSize = 30;
         const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30;
         const buttonY = this.frame[1] + 30 + index * (buttonSize + 10);
-        if (target.visible) {
+        if (this.panelStack.includes(target)) {
             fill(200);
         }
         else {
@@ -422,7 +431,7 @@ class UI {
         rect(buttonX, buttonY, buttonSize, buttonSize, 10);
         fill(0);
         textAlign(CENTER, CENTER);
-        text(index, buttonX + buttonSize / 2, buttonY + buttonSize / 2);
+        text((_a = target.description[0].toUpperCase()) !== null && _a !== void 0 ? _a : index.toString(), buttonX + buttonSize / 2, buttonY + buttonSize / 2);
         if (mouseIsPressed &&
             mouseX > buttonX &&
             mouseX < buttonX + buttonSize &&
@@ -430,7 +439,13 @@ class UI {
             mouseY < buttonY + buttonSize) {
             if (this.clickDebounce === 0) {
                 this.clickDebounce = 1;
-                target.visible = !target.visible;
+                if (this.panelStack.includes(target)) {
+                    const index = this.panelStack.indexOf(target);
+                    this.panelStack.splice(index, 1);
+                }
+                else {
+                    this.panelStack.push(target);
+                }
                 setTimeout(() => {
                     this.clickDebounce = 0;
                 }, 500);
@@ -444,47 +459,59 @@ class UI {
     render() {
         this.drawToggleButton(this.appUI, 0);
         this.drawToggleButton(this.serialPrompt, 1);
-        this.appUI.render();
-        this.serialPrompt.render();
+        let stackOffset = createVector(0, 0);
+        for (const panel of this.panelStack) {
+            panel.render(stackOffset);
+            stackOffset.y += panel.frame[3] + 10;
+        }
     }
 }
 class UIPanel {
     constructor(frame) {
-        this.visible = true;
+        this.description = '';
         this.frame = frame;
-        this.visible = true;
+        this.panelOffset = createVector(0, 0);
         this.clickDebounce = 0;
-    }
-    toggleVisibility() {
-        this.visible = !this.visible;
     }
     drawFrame() {
         push();
-        drawingContext.shadowOffsetY = 8;
-        drawingContext.shadowBlur = 10;
+        drawingContext.shadowOffsetY = 2;
+        drawingContext.shadowBlur = 4;
         drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
         strokeWeight(0);
         fill(255);
-        rect(...this.frame, 10);
+        const newFrame = [
+            this.frame[0] + this.panelOffset.x,
+            this.frame[1] + this.panelOffset.y,
+            this.frame[2],
+            this.frame[3],
+        ];
+        rect(...newFrame, 10);
         pop();
     }
-    render() {
-        if (!this.visible)
-            return;
+    getOffsetFrame() {
+        return [
+            this.frame[0] + this.panelOffset.x,
+            this.frame[1] + this.panelOffset.y,
+            this.frame[2],
+            this.frame[3],
+        ];
+    }
+    render(panelOffset) {
+        this.panelOffset = panelOffset;
         this.drawFrame();
     }
 }
 class AppUI extends UIPanel {
     constructor(frame) {
         super(frame);
-        this.visible = true;
         this.avatarColor = this.getRandomAvatarColor();
         this.avatarD = 70;
-        this.avatarX = this.frame[0] + this.avatarD / 2 + 40;
-        this.avatarY = this.frame[1] + this.avatarD / 2 + 30;
+        this.avatarY = this.getOffsetFrame()[1] + this.avatarD / 2 + 30;
         this.visibilitySketchyLines = [];
         this.id = this.getRandomID();
         this.verified = false;
+        this.description = 'App UI';
         this.buttons = [
             {
                 name: 'LIKE',
@@ -530,7 +557,7 @@ class AppUI extends UIPanel {
     }
     drawAvatar() {
         fill(this.avatarColor);
-        ellipse(this.avatarX, this.avatarY, this.avatarD);
+        ellipse(this.getOffsetFrame()[0] + this.avatarD / 2 + 40, this.getOffsetFrame()[1] + this.avatarD / 2 + 40, this.avatarD);
     }
     static verifiedBadge(x, y, size = 20) {
         stroke('rgba(0,0,0,0)');
@@ -540,8 +567,8 @@ class AppUI extends UIPanel {
         ellipse(x, y, (size * 7) / 20);
     }
     drawID() {
-        const idX = this.frame[0] + 60 + this.avatarD;
-        const idY = this.frame[1] + 50;
+        const idX = this.getOffsetFrame()[0] + 60 + this.avatarD;
+        const idY = this.getOffsetFrame()[1] + 50;
         fill(180);
         textSize(18);
         textAlign(LEFT, CENTER);
@@ -609,15 +636,19 @@ class AppUI extends UIPanel {
         const buttonHeight = 40;
         const buttonPadding = 20;
         for (let i = 0; i < this.buttons.length; i++) {
-            const buttonX = this.frame[0] + i * buttonWidth + 50 + i * buttonPadding;
-            const buttonY = this.frame[1] + this.frame[3] - buttonHeight - 30;
+            const buttonX = this.getOffsetFrame()[0] +
+                i * buttonWidth +
+                50 +
+                i * buttonPadding;
+            const buttonY = this.getOffsetFrame()[1] +
+                this.getOffsetFrame()[3] -
+                buttonHeight -
+                30;
             fill('rgba(0,0,0,0)');
             rect(buttonX, buttonY, buttonWidth, buttonHeight);
             stroke(0);
             strokeWeight(1);
-            if (this.buttons[i].lines === undefined) {
-                this.buttons[i].lines = [];
-            }
+            this.buttons[i].lines = [];
             this.drawButtonSketchyOutlines(this.buttons[i].lines, buttonX, buttonY, buttonWidth, buttonHeight);
             fill(0);
             textAlign(CENTER, CENTER);
@@ -639,21 +670,18 @@ class AppUI extends UIPanel {
     }
     drawVisibilityButton() {
         const buttonSize = 40;
-        const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30;
-        const buttonY = this.frame[1] + 30;
+        const buttonX = this.getOffsetFrame()[0] +
+            this.getOffsetFrame()[2] -
+            buttonSize -
+            30;
+        const buttonY = this.getOffsetFrame()[1] + 30;
         fill(255);
         stroke(0);
+        this.visibilitySketchyLines = [];
         this.drawButtonSketchyOutlines(this.visibilitySketchyLines, buttonX, buttonY, buttonSize, buttonSize);
         fill(0);
         textAlign(CENTER, CENTER);
         text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2);
-        if (mouseIsPressed &&
-            mouseX > buttonX &&
-            mouseX < buttonX + buttonSize &&
-            mouseY > buttonY &&
-            mouseY < buttonY + buttonSize) {
-            this.toggleVisibility();
-        }
     }
     animatePropagation(senderX, senderY, receiverX, receiverY) {
         let t = 0;
@@ -669,11 +697,11 @@ class AppUI extends UIPanel {
             ellipse(x, y, 10);
         }, 30);
     }
-    render() {
-        if (!this.visible)
-            return;
+    render(panelOffset) {
+        this.panelOffset = panelOffset;
         this.drawFrame();
         push();
+        strokeWeight(0);
         this.drawAvatar();
         this.drawID();
         this.drawButtons();
@@ -684,28 +712,29 @@ class AppUI extends UIPanel {
 class SerialPrompt extends UIPanel {
     constructor(frame) {
         super(frame);
-        this.visible = false;
+        this.description = 'Serial Prompt';
     }
     drawSerialPrompt() {
         const device = TSNDevice.getInstance();
         push();
         fill(255);
         strokeWeight(0);
-        rect(...this.frame, 10);
+        rect(...this.getOffsetFrame(), 10);
         fill(0);
         textAlign(LEFT, TOP);
         textSize(20);
-        text('TSN Device', this.frame[0] + 30, this.frame[1] + 30);
+        text('TSN Device', this.getOffsetFrame()[0] + 30, this.getOffsetFrame()[1] + 30);
         fill(80);
-        rect(this.frame[0] + this.frame[2] - 130, this.frame[1] + this.frame[3] - 70, 100, 40, 20);
+        rect(this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 130, this.getOffsetFrame()[1] + this.getOffsetFrame()[3] - 70, 100, 40, 20);
         fill(255);
         textAlign(CENTER, CENTER);
-        text('Connect', this.frame[0] + this.frame[2] - 80, this.frame[1] + this.frame[3] - 50);
+        text('Connect', this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 80, this.getOffsetFrame()[1] + this.getOffsetFrame()[3] - 50);
         if (mouseIsPressed &&
-            mouseX > this.frame[0] + this.frame[2] - 130 &&
-            mouseX < this.frame[0] + this.frame[2] - 30 &&
-            mouseY > this.frame[1] + this.frame[3] - 70 &&
-            mouseY < this.frame[1] + this.frame[3] - 30) {
+            mouseX >
+                this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 130 &&
+            mouseX < this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 30 &&
+            mouseY > this.getOffsetFrame()[1] + this.getOffsetFrame()[3] - 70 &&
+            mouseY < this.getOffsetFrame()[1] + this.getOffsetFrame()[3] - 30) {
             if (this.clickDebounce === 0) {
                 this.clickDebounce = 1;
                 device.connect().then(() => {
@@ -717,17 +746,16 @@ class SerialPrompt extends UIPanel {
         }
         device.connections().map((connection, index) => {
             fill(210);
-            rect(this.frame[0] + 40, this.frame[1] + 37 + 30 * (index + 1), 100, 26, 13);
+            rect(this.getOffsetFrame()[0] + 40, this.getOffsetFrame()[1] + 37 + 30 * (index + 1), 100, 26, 13);
             fill(0);
             textAlign(LEFT, CENTER);
-            text(connection[0], this.frame[0] + 50, this.frame[1] + 50 + 30 * (index + 1));
-            text(connection[1], this.frame[0] + 100, this.frame[1] + 50 + 30 * (index + 1));
+            text(connection[0], this.getOffsetFrame()[0] + 50, this.getOffsetFrame()[1] + 50 + 30 * (index + 1));
+            text(connection[1], this.getOffsetFrame()[0] + 100, this.getOffsetFrame()[1] + 50 + 30 * (index + 1));
         });
         pop();
     }
-    render() {
-        if (!this.visible)
-            return;
+    render(panelOffset) {
+        this.panelOffset = panelOffset;
         this.drawFrame();
         this.drawSerialPrompt();
     }

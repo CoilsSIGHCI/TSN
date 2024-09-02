@@ -21,7 +21,7 @@ class Message {
             read: false,
         }
         receiver.inbox.push(flaggedMessage)
-        
+
         // Visualize the propagation
         const senderX = this.sender.vector.x
         const senderY = this.sender.vector.y

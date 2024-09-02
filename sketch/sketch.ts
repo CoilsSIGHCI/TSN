@@ -16,28 +16,28 @@ function setup() {
         0: {
             size: 10,
             center: createVector(0.1, 0.8),
-            enabled: true
+            enabled: true,
         },
         1: {
             size: 20,
             center: createVector(0.8, 0.3),
-            enabled: true
+            enabled: true,
         },
         2: {
             size: 40,
             center: createVector(0.3, 0.8),
-            enabled: true
+            enabled: true,
         },
         3: {
             size: 20,
             center: createVector(0.4, 0.2),
-            enabled: true
+            enabled: true,
         },
         4: {
             size: 100,
             center: createVector(0.5, 0.5),
-            enabled: true
-        }
+            enabled: true,
+        },
     }
     pool = new Pool(clusterSizeTable)
     createCanvas(windowWidth, windowHeight)
@@ -59,7 +59,7 @@ function draw() {
     // Grow
     if (tick === growthTicks) {
         pool.updateConnections()
-        console.log("update")
+        console.log('update')
         pool.points.forEach((point) => {
             point.grow()
         })

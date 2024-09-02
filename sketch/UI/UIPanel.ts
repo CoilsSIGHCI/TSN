@@ -1,31 +1,46 @@
 class UIPanel {
+    description: string = ''
     frame: [number, number, number, number]
-    visible: boolean = true
+    panelOffset: p5.Vector
     clickDebounce: number
 
     constructor(frame: [number, number, number, number]) {
         this.frame = frame
-        this.visible = true
+        this.panelOffset = createVector(0, 0)
         this.clickDebounce = 0
-    }
-
-    toggleVisibility() {
-        this.visible = !this.visible
     }
 
     drawFrame() {
         push()
-        drawingContext.shadowOffsetY = 8
-        drawingContext.shadowBlur = 10
+
+        drawingContext.shadowOffsetY = 2
+        drawingContext.shadowBlur = 4
         drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)'
         strokeWeight(0)
         fill(255)
-        rect(...this.frame, 10)
+
+        const newFrame: [number, number, number, number] = [
+            this.frame[0] + this.panelOffset.x,
+            this.frame[1] + this.panelOffset.y,
+            this.frame[2],
+            this.frame[3],
+        ]
+        rect(...newFrame, 10)
+
         pop()
     }
 
-    render() {
-        if (!this.visible) return
+    getOffsetFrame(): [number, number, number, number] {
+        return [
+            this.frame[0] + this.panelOffset.x,
+            this.frame[1] + this.panelOffset.y,
+            this.frame[2],
+            this.frame[3],
+        ]
+    }
+
+    render(panelOffset: p5.Vector) {
+        this.panelOffset = panelOffset
         this.drawFrame()
     }
 }

@@ -22,7 +22,7 @@ class Individual {
         vector: p5.Vector,
         verified?: boolean,
         personality?: IndividualPersonality,
-        clusterId?: number
+        clusterId?: number,
     ) {
         this.personality = personality || {
             openness: random(0, 1),
@@ -105,9 +105,7 @@ class Individual {
             attractive: this.calculateAttractiveness(originalMessage),
         }
 
-        const topic = originalMessage
-            ? originalMessage.topic
-            : ''
+        const topic = originalMessage ? originalMessage.topic : ''
 
         return new Message(this, property, topic)
     }

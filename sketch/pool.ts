@@ -22,14 +22,19 @@ class Pool {
             const clusterPoints: Individual[] = []
 
             for (let i = 0; i < property.size; i++) {
-                const theta = random(0, TWO_PI);
-                const radius = random(0, 0.002 * property.size);
+                const theta = random(0, TWO_PI)
+                const radius = random(0, 0.002 * property.size)
                 const offset = createVector(
                     radius * cos(theta),
-                    radius * sin(theta)
-                );
+                    radius * sin(theta),
+                )
                 const position = p5.Vector.add(property.center, offset)
-                const newIndividual = new Individual(position, undefined, undefined, id)
+                const newIndividual = new Individual(
+                    position,
+                    undefined,
+                    undefined,
+                    id,
+                )
                 this.points.push(newIndividual)
                 clusterPoints.push(newIndividual)
             }
@@ -40,156 +45,189 @@ class Pool {
     }
 
     async updateConnections() {
-        const hardwareConnections = TSNDevice.getInstance().connections();
+        const hardwareConnections = TSNDevice.getInstance().connections()
 
-        console.log(hardwareConnections);
+        console.log(hardwareConnections)
 
         // Clear all existing inter-cluster connections
-        this.points.forEach(point => {
-            point.connections = point.connections.filter(conn => conn.clusterId === point.clusterId);
-        });
+        this.points.forEach((point) => {
+            point.connections = point.connections.filter(
+                (conn) => conn.clusterId === point.clusterId,
+            )
+        })
 
         // Update connections based on hardware data
         hardwareConnections.forEach((conn) => {
-            const cluster1Id = conn[0];
-            const cluster2Id = conn[1];
+            const cluster1Id = conn[0]
+            const cluster2Id = conn[1]
 
             if (this.clusters[cluster1Id] && this.clusters[cluster2Id]) {
-                this.createRandomConnectionsBetweenClusters(cluster1Id, cluster2Id);
+                this.createRandomConnectionsBetweenClusters(
+                    cluster1Id,
+                    cluster2Id,
+                )
             }
-        });
+        })
     }
 
     private createInternalConnectionsByDistance(clusterPoints: Individual[]) {
-        const maxConnections = 3; // Maximum number of connections per individual
-        const connectionThreshold = 0.03 * min(screenX, screenY); // Adjust this value to control the connection distance
+        const maxConnections = 3 // Maximum number of connections per individual
+        const connectionThreshold = 0.03 * min(screenX, screenY) // Adjust this value to control the connection distance
 
         for (let i = 0; i < clusterPoints.length; i++) {
-            const point = clusterPoints[i];
+            const point = clusterPoints[i]
             const distances = clusterPoints
-                .map((p, index) => ({ index, distance: p5.Vector.dist(point.vector, p.vector) }))
-                .filter(d => d.index !== i) // Exclude self
-                .sort((a, b) => a.distance - b.distance); // Sort by distance
+                .map((p, index) => ({
+                    index,
+                    distance: p5.Vector.dist(point.vector, p.vector),
+                }))
+                .filter((d) => d.index !== i) // Exclude self
+                .sort((a, b) => a.distance - b.distance) // Sort by distance
 
-            let connectionCount = 0;
+            let connectionCount = 0
             for (const { index, distance } of distances) {
-                if (connectionCount >= maxConnections) break;
+                if (connectionCount >= maxConnections) break
                 if (distance <= connectionThreshold) {
-                    const otherPoint = clusterPoints[index];
+                    const otherPoint = clusterPoints[index]
                     if (!point.connections.includes(otherPoint)) {
-                        this.updateIndividualConnections(point, otherPoint);
-                        this.updateIndividualConnections(otherPoint, point);
-                        connectionCount++;
+                        this.updateIndividualConnections(point, otherPoint)
+                        this.updateIndividualConnections(otherPoint, point)
+                        connectionCount++
                     }
                 } else {
-                    break; // Stop if distance exceeds threshold
+                    break // Stop if distance exceeds threshold
                 }
             }
         }
     }
 
-    private createRandomConnectionsBetweenClusters(cluster1Id: number, cluster2Id: number) {
-        const points1 = this.points.filter(p => p.clusterId === cluster1Id);
-        const points2 = this.points.filter(p => p.clusterId === cluster2Id);
+    private createRandomConnectionsBetweenClusters(
+        cluster1Id: number,
+        cluster2Id: number,
+    ) {
+        const points1 = this.points.filter((p) => p.clusterId === cluster1Id)
+        const points2 = this.points.filter((p) => p.clusterId === cluster2Id)
 
-        if (points1.length === 0 || points2.length === 0) return;
+        if (points1.length === 0 || points2.length === 0) return
 
-        const connectionCount = Math.floor(random(
-            min(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size),
-            max(this.clusters[cluster1Id].size, this.clusters[cluster2Id].size)
-        ) * 0.6);
+        const connectionCount = Math.floor(
+            random(
+                min(
+                    this.clusters[cluster1Id].size,
+                    this.clusters[cluster2Id].size,
+                ),
+                max(
+                    this.clusters[cluster1Id].size,
+                    this.clusters[cluster2Id].size,
+                ),
+            ) * 0.6,
+        )
 
         for (let i = 0; i < connectionCount; i++) {
-            const point1 = random(points1);
-            const point2 = random(points2);
+            const point1 = random(points1)
+            const point2 = random(points2)
 
-            this.updateIndividualConnections(point1, point2);
-            this.updateIndividualConnections(point2, point1);
+            this.updateIndividualConnections(point1, point2)
+            this.updateIndividualConnections(point2, point1)
         }
     }
 
-    private updateIndividualConnections(individual: Individual, connection: Individual) {
+    private updateIndividualConnections(
+        individual: Individual,
+        connection: Individual,
+    ) {
         if (!individual.connections.includes(connection)) {
-            individual.connections.push(connection);
+            individual.connections.push(connection)
         }
     }
 
     renderPool(ui: UI) {
-        this.updateClusterForces();
+        this.updateClusterForces()
 
         // Draw clusters
         for (const clusterId in this.clusters) {
-            const cluster = this.clusters[clusterId];
+            const cluster = this.clusters[clusterId]
             if (cluster.enabled) {
-                noFill();
-                stroke('rgba(100,100,100,0.2)');
-                const screenX = cluster.center.x * width;
-                const screenY = cluster.center.y * height;
-                ellipse(screenX, screenY, 5*cluster.size, 5*cluster.size);
+                noFill()
+                stroke('rgba(100,100,100,0.2)')
+                const screenX = cluster.center.x * width
+                const screenY = cluster.center.y * height
+                ellipse(screenX, screenY, 5 * cluster.size, 5 * cluster.size)
             }
         }
 
         // Draw individuals and connections
         for (let i = 0; i < this.points.length; i++) {
-            const point = this.points[i];
+            const point = this.points[i]
             if (this.clusters[point.clusterId].enabled) {
                 // Draw individual
-                stroke('rgba(0,0,0,0)');
-                fill(`rgba(${(point.clusterId * 50) % 255},${(point.clusterId * 100) % 255},${(point.clusterId * 150) % 255},0.8)`);
-                const screenX = point.vector.x * width;
-                const screenY = point.vector.y * height;
-                ellipse(screenX, screenY, 10, 10);
+                stroke('rgba(0,0,0,0)')
+                fill(
+                    `rgba(${(point.clusterId * 50) % 255},${(point.clusterId * 100) % 255},${(point.clusterId * 150) % 255},0.8)`,
+                )
+                const screenX = point.vector.x * width
+                const screenY = point.vector.y * height
+                ellipse(screenX, screenY, 10, 10)
 
                 if (point.verified) {
-                    AppUI.verifiedBadge(screenX + 12, screenY, 10);
+                    AppUI.verifiedBadge(screenX + 12, screenY, 10)
                 }
 
                 // Draw connections
-                this.drawConnections(point);
+                this.drawConnections(point)
             }
         }
     }
 
     private updateClusterForces() {
-        const clusterAttractionStrength = 0.0001; // Strength of attraction to cluster center
-        const clusterRepulsionStrength = 0.000001; // Strength of repulsion from other cluster centers
-        const individualRepulsionStrength = 0.0001; // Strength of repulsion from other individuals
-        const individualDistanceThreshold = 0.05; // Distance threshold for individual repulsion
-        const connectionAttractionStrength = 0.00001; // Strength of attraction between connected individuals
-        const clusterBoundaryForce = 0.00001; // Strength of force keeping elements within cluster
-        const clusterRadius = 0.5; // Radius of the cluster (adjust as needed)
+        const clusterAttractionStrength = 0.0001 // Strength of attraction to cluster center
+        const clusterRepulsionStrength = 0.000001 // Strength of repulsion from other cluster centers
+        const individualRepulsionStrength = 0.0001 // Strength of repulsion from other individuals
+        const individualDistanceThreshold = 0.05 // Distance threshold for individual repulsion
+        const connectionAttractionStrength = 0.00001 // Strength of attraction between connected individuals
+        const clusterBoundaryForce = 0.00001 // Strength of force keeping elements within cluster
+        const clusterRadius = 0.5 // Radius of the cluster (adjust as needed)
 
         for (const point of this.points) {
-            const cluster = this.clusters[point.clusterId];
+            const cluster = this.clusters[point.clusterId]
             if (cluster.enabled) {
                 // Vector from cluster center to point
                 const toPoint = createVector(
                     point.vector.x - cluster.center.x,
-                    point.vector.y - cluster.center.y
-                );
-                const distanceFromCenter = toPoint.mag();
+                    point.vector.y - cluster.center.y,
+                )
+                const distanceFromCenter = toPoint.mag()
 
                 // Attraction to cluster center
-                let attractionForce = toPoint.copy().mult(-1);
+                let attractionForce = toPoint.copy().mult(-1)
                 if (distanceFromCenter > 0.2) {
                     // Apply stronger force if point is outside cluster radius
-                    attractionForce.setMag(clusterBoundaryForce * (distanceFromCenter - clusterRadius));
+                    attractionForce.setMag(
+                        clusterBoundaryForce *
+                            (distanceFromCenter - clusterRadius),
+                    )
                 } else {
-                    attractionForce.setMag(clusterAttractionStrength);
+                    attractionForce.setMag(clusterAttractionStrength)
                 }
-                point.vector.add(attractionForce);
+                point.vector.add(attractionForce)
 
                 // Repulsion from other clusters
                 for (const otherId in this.clusters) {
-                    const otherCluster = this.clusters[parseInt(otherId)];
-                    if (parseInt(otherId) !== point.clusterId && otherCluster.enabled) {
+                    const otherCluster = this.clusters[parseInt(otherId)]
+                    if (
+                        parseInt(otherId) !== point.clusterId &&
+                        otherCluster.enabled
+                    ) {
                         const repulsionForce = createVector(
                             point.vector.x - otherCluster.center.x,
-                            point.vector.y - otherCluster.center.y
-                        );
-                        const distance = repulsionForce.mag();
-                        repulsionForce.setMag((1 / (distance * distance)) * clusterRepulsionStrength);
-                        point.vector.add(repulsionForce);
+                            point.vector.y - otherCluster.center.y,
+                        )
+                        const distance = repulsionForce.mag()
+                        repulsionForce.setMag(
+                            (1 / (distance * distance)) *
+                                clusterRepulsionStrength,
+                        )
+                        point.vector.add(repulsionForce)
                     }
                 }
 
@@ -197,55 +235,61 @@ class Pool {
                 for (const connectedPoint of point.connections) {
                     const connectionForce = createVector(
                         connectedPoint.vector.x - point.vector.x,
-                        connectedPoint.vector.y - point.vector.y
-                    );
-                    connectionForce.setMag(connectionAttractionStrength);
-                    point.vector.add(connectionForce);
+                        connectedPoint.vector.y - point.vector.y,
+                    )
+                    connectionForce.setMag(connectionAttractionStrength)
+                    point.vector.add(connectionForce)
                 }
 
                 // Strong repulsion from other individuals when they are too close
                 for (const otherPoint of this.points) {
-                    if (otherPoint !== point && p5.Vector.dist(point.vector, otherPoint.vector) < individualDistanceThreshold) {
+                    if (
+                        otherPoint !== point &&
+                        p5.Vector.dist(point.vector, otherPoint.vector) <
+                            individualDistanceThreshold
+                    ) {
                         const strongRepulsionForce = createVector(
                             point.vector.x - otherPoint.vector.x,
-                            point.vector.y - otherPoint.vector.y
-                        );
-                        strongRepulsionForce.setMag(individualRepulsionStrength);
-                        point.vector.add(strongRepulsionForce);
+                            point.vector.y - otherPoint.vector.y,
+                        )
+                        strongRepulsionForce.setMag(individualRepulsionStrength)
+                        point.vector.add(strongRepulsionForce)
                     }
                 }
 
                 // Add some random movement (in proportion)
-                point.vector.x += (random(-0.5, 0.5) * 0.0001);
-                point.vector.y += (random(-0.5, 0.5) * 0.0001);
+                point.vector.x += random(-0.5, 0.5) * 0.0001
+                point.vector.y += random(-0.5, 0.5) * 0.0001
 
                 // Ensure the point stays within the cluster bounds
                 const finalToPoint = createVector(
                     point.vector.x - cluster.center.x,
-                    point.vector.y - cluster.center.y
-                );
+                    point.vector.y - cluster.center.y,
+                )
                 if (finalToPoint.mag() > clusterRadius) {
-                    finalToPoint.setMag(clusterRadius);
-                    point.vector.x = cluster.center.x + finalToPoint.x;
-                    point.vector.y = cluster.center.y + finalToPoint.y;
+                    finalToPoint.setMag(clusterRadius)
+                    point.vector.x = cluster.center.x + finalToPoint.x
+                    point.vector.y = cluster.center.y + finalToPoint.y
                 }
 
                 // Ensure the point stays within the screen bounds
-                point.vector.x = constrain(point.vector.x, 0, 1);
-                point.vector.y = constrain(point.vector.y, 0, 1);
+                point.vector.x = constrain(point.vector.x, 0, 1)
+                point.vector.y = constrain(point.vector.y, 0, 1)
             }
         }
     }
 
     private drawConnections(point: Individual) {
         for (let i = 0; i < point.connections.length; i++) {
-            const otherPoint = point.connections[i];
-            const alpha = 0.5 - i * 0.1; // Decrease opacity for each subsequent connection
-            stroke(`rgba(100,100,100,${alpha > 0 ? alpha : 0.1})`);
+            const otherPoint = point.connections[i]
+            const alpha = 0.5 - i * 0.1 // Decrease opacity for each subsequent connection
+            stroke(`rgba(100,100,100,${alpha > 0 ? alpha : 0.1})`)
             line(
-                point.vector.x * width, point.vector.y * height,
-                otherPoint.vector.x * width, otherPoint.vector.y * height
-            );
+                point.vector.x * width,
+                point.vector.y * height,
+                otherPoint.vector.x * width,
+                otherPoint.vector.y * height,
+            )
         }
     }
 }

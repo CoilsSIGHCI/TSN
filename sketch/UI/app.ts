@@ -8,13 +8,10 @@ type FunctionButtonRender = FunctionButton & {
 }
 
 class AppUI extends UIPanel {
-    visible: boolean = true
-
     buttons: FunctionButtonRender[]
     avatarColor: string = this.getRandomAvatarColor()
     avatarD = 70
-    avatarX = this.frame[0] + this.avatarD / 2 + 40
-    avatarY = this.frame[1] + this.avatarD / 2 + 30
+    avatarY = this.getOffsetFrame()[1] + this.avatarD / 2 + 30
     visibilitySketchyLines: number[][] = []
     id: number = this.getRandomID()
     verified = false
@@ -22,6 +19,8 @@ class AppUI extends UIPanel {
 
     constructor(frame: [number, number, number, number]) {
         super(frame)
+
+        this.description = 'App UI'
         this.buttons = [
             {
                 name: 'LIKE',
@@ -71,7 +70,11 @@ class AppUI extends UIPanel {
 
     drawAvatar() {
         fill(this.avatarColor)
-        ellipse(this.avatarX, this.avatarY, this.avatarD)
+        ellipse(
+            this.getOffsetFrame()[0] + this.avatarD / 2 + 40,
+            this.getOffsetFrame()[1] + this.avatarD / 2 + 40,
+            this.avatarD,
+        )
     }
 
     static verifiedBadge(x: number, y: number, size = 20) {
@@ -83,8 +86,8 @@ class AppUI extends UIPanel {
     }
 
     drawID() {
-        const idX = this.frame[0] + 60 + this.avatarD
-        const idY = this.frame[1] + 50
+        const idX = this.getOffsetFrame()[0] + 60 + this.avatarD
+        const idY = this.getOffsetFrame()[1] + 50
 
         fill(180)
         textSize(18)
@@ -181,17 +184,24 @@ class AppUI extends UIPanel {
 
         for (let i = 0; i < this.buttons.length; i++) {
             const buttonX =
-                this.frame[0] + i * buttonWidth + 50 + i * buttonPadding
-            const buttonY = this.frame[1] + this.frame[3] - buttonHeight - 30
+                this.getOffsetFrame()[0] +
+                i * buttonWidth +
+                50 +
+                i * buttonPadding
+            const buttonY =
+                this.getOffsetFrame()[1] +
+                this.getOffsetFrame()[3] -
+                buttonHeight -
+                30
 
             fill('rgba(0,0,0,0)')
             rect(buttonX, buttonY, buttonWidth, buttonHeight)
             stroke(0)
             strokeWeight(1)
 
-            if (this.buttons[i].lines === undefined) {
-                this.buttons[i].lines = []
-            }
+            // if (this.buttons[i].lines === undefined) {
+            this.buttons[i].lines = []
+            // }
 
             this.drawButtonSketchyOutlines(
                 this.buttons[i].lines,
@@ -229,11 +239,17 @@ class AppUI extends UIPanel {
 
     drawVisibilityButton() {
         const buttonSize = 40
-        const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30
-        const buttonY = this.frame[1] + 30
+        const buttonX =
+            this.getOffsetFrame()[0] +
+            this.getOffsetFrame()[2] -
+            buttonSize -
+            30
+        const buttonY = this.getOffsetFrame()[1] + 30
 
         fill(255)
         stroke(0)
+
+        this.visibilitySketchyLines = []
 
         this.drawButtonSketchyOutlines(
             this.visibilitySketchyLines,
@@ -247,18 +263,23 @@ class AppUI extends UIPanel {
         textAlign(CENTER, CENTER)
         text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2)
 
-        if (
-            mouseIsPressed &&
-            mouseX > buttonX &&
-            mouseX < buttonX + buttonSize &&
-            mouseY > buttonY &&
-            mouseY < buttonY + buttonSize
-        ) {
-            this.toggleVisibility()
-        }
+        // if (
+        //     mouseIsPressed &&
+        //     mouseX > buttonX &&
+        //     mouseX < buttonX + buttonSize &&
+        //     mouseY > buttonY &&
+        //     mouseY < buttonY + buttonSize
+        // ) {
+        //     this.toggleVisibility()
+        // }
     }
 
-    animatePropagation(senderX: number, senderY: number, receiverX: number, receiverY: number) {
+    animatePropagation(
+        senderX: number,
+        senderY: number,
+        receiverX: number,
+        receiverY: number,
+    ) {
         let t = 0
         const interval = setInterval(() => {
             t += 0.02
@@ -273,10 +294,11 @@ class AppUI extends UIPanel {
         }, 30)
     }
 
-    render() {
-        if (!this.visible) return
+    render(panelOffset: p5.Vector) {
+        this.panelOffset = panelOffset
         this.drawFrame()
         push()
+        strokeWeight(0)
         this.drawAvatar()
         this.drawID()
         this.drawButtons()
