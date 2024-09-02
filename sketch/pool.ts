@@ -141,7 +141,7 @@ class Pool {
                 ellipse(screenX, screenY, 10, 10);
 
                 if (point.verified) {
-                    UI.verifiedBadge(screenX + 12, screenY, 10);
+                    AppUI.verifiedBadge(screenX + 12, screenY, 10);
                 }
 
                 // Draw connections
@@ -151,8 +151,10 @@ class Pool {
     }
 
     private updateClusterForces() {
-        const clusterAttractionStrength = 0.0000; // Strength of attraction to cluster center
-        const clusterRepulsionStrength = 0.0000; // Strength of repulsion from other cluster centers
+        const clusterAttractionStrength = 0.0001; // Strength of attraction to cluster center
+        const clusterRepulsionStrength = 0.000001; // Strength of repulsion from other cluster centers
+        const individualRepulsionStrength = 0.0001; // Strength of repulsion from other individuals
+        const individualDistanceThreshold = 0.05; // Distance threshold for individual repulsion
         const connectionAttractionStrength = 0.00001; // Strength of attraction between connected individuals
         const clusterBoundaryForce = 0.00001; // Strength of force keeping elements within cluster
         const clusterRadius = 0.5; // Radius of the cluster (adjust as needed)
@@ -169,7 +171,7 @@ class Pool {
 
                 // Attraction to cluster center
                 let attractionForce = toPoint.copy().mult(-1);
-                if (distanceFromCenter > clusterRadius) {
+                if (distanceFromCenter > 0.2) {
                     // Apply stronger force if point is outside cluster radius
                     attractionForce.setMag(clusterBoundaryForce * (distanceFromCenter - clusterRadius));
                 } else {
@@ -199,6 +201,18 @@ class Pool {
                     );
                     connectionForce.setMag(connectionAttractionStrength);
                     point.vector.add(connectionForce);
+                }
+
+                // Strong repulsion from other individuals when they are too close
+                for (const otherPoint of this.points) {
+                    if (otherPoint !== point && p5.Vector.dist(point.vector, otherPoint.vector) < individualDistanceThreshold) {
+                        const strongRepulsionForce = createVector(
+                            point.vector.x - otherPoint.vector.x,
+                            point.vector.y - otherPoint.vector.y
+                        );
+                        strongRepulsionForce.setMag(individualRepulsionStrength);
+                        point.vector.add(strongRepulsionForce);
+                    }
                 }
 
                 // Add some random movement (in proportion)

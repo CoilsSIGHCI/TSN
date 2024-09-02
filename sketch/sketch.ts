@@ -44,7 +44,6 @@ function setup() {
     noFill().frameRate(60)
 
     ui = new UI()
-    ui.enableUpdate()
 }
 
 // p5 WILL AUTO RUN THIS FUNCTION IF THE BROWSER WINDOW SIZE CHANGES
@@ -56,8 +55,6 @@ function windowResized() {
 function draw() {
     // CLEAR BACKGROUND
     background(234)
-
-    const functions = ui.buttons
 
     // Grow
     if (tick === growthTicks) {

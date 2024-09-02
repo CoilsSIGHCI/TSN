@@ -7,26 +7,21 @@ type FunctionButtonRender = FunctionButton & {
     lines?: number[][]
 }
 
-export class UI {
-    buttons: FunctionButtonRender[]
-    frame: [number, number, number, number] = [30, 30, 400, 300]
-    serialPromptFrame: [number, number, number, number] = [30, 400, 400, 200]
+class AppUI extends UIPanel {
+    visible: boolean = true
 
-    // random color for the avatar (HSB color mode)
+    buttons: FunctionButtonRender[]
     avatarColor: string = this.getRandomAvatarColor()
     avatarD = 70
     avatarX = this.frame[0] + this.avatarD / 2 + 40
     avatarY = this.frame[1] + this.avatarD / 2 + 30
-
     visibilitySketchyLines: number[][] = []
-
     id: number = this.getRandomID()
     verified = false
+    serialPrompt: SerialPrompt
 
-    clickDebounce = 0
-    clickDebounceLock = 0
-
-    constructor() {
+    constructor(frame: [number, number, number, number]) {
+        super(frame)
         this.buttons = [
             {
                 name: 'LIKE',
@@ -55,16 +50,6 @@ export class UI {
         ]
     }
 
-    // check if point is inside the frame
-    isPointInside(x: number, y: number) {
-        return (
-            x > this.frame[0] &&
-            x < this.frame[0] + this.frame[2] &&
-            y > this.frame[1] &&
-            y < this.frame[1] + this.frame[3]
-        )
-    }
-
     private getRandomAvatarColor(): string {
         const hue = Math.floor(random(0, 360))
         const saturation = Math.floor(random(30, 66))
@@ -76,19 +61,12 @@ export class UI {
         return Math.floor(random(60, 120))
     }
 
-    // change content periodically
     enableUpdate() {
         setInterval(() => {
             this.avatarColor = this.getRandomAvatarColor()
             this.id = this.getRandomID()
-            // verified by chance (50%)
             this.verified = random() < 0.1
         }, 3000)
-    }
-
-    drawFrame() {
-        fill(255)
-        rect(...this.frame, 10)
     }
 
     drawAvatar() {
@@ -110,16 +88,15 @@ export class UI {
 
         fill(180)
         textSize(18)
-        textAlign(LEFT, CENTER) // set text alignment to left
+        textAlign(LEFT, CENTER)
         text('@', idX, idY + 35)
         rect(idX + 19, idY + 22, this.id * 0.7, 24, 7)
 
         fill(121)
         rect(idX, idY - 15, this.id, 30, 7)
 
-        // verified badge
         if (this.verified) {
-            UI.verifiedBadge(idX + this.id + 17, idY)
+            AppUI.verifiedBadge(idX + this.id + 17, idY)
         }
     }
 
@@ -198,12 +175,10 @@ export class UI {
     }
 
     drawButtons() {
-        // calculate button dimensions
         const buttonWidth = 60
         const buttonHeight = 40
         const buttonPadding = 20
 
-        // show buttons
         for (let i = 0; i < this.buttons.length; i++) {
             const buttonX =
                 this.frame[0] + i * buttonWidth + 50 + i * buttonPadding
@@ -211,7 +186,6 @@ export class UI {
 
             fill('rgba(0,0,0,0)')
             rect(buttonX, buttonY, buttonWidth, buttonHeight)
-            // draw sketchy lines as button border
             stroke(0)
             strokeWeight(1)
 
@@ -228,14 +202,13 @@ export class UI {
             )
 
             fill(0)
-            textAlign(CENTER, CENTER) // set text alignment to center
+            textAlign(CENTER, CENTER)
             text(
                 this.buttons[i].name,
                 buttonX + buttonWidth / 2,
                 buttonY + buttonHeight / 2,
-            ) // center the text
+            )
 
-            // click event
             if (
                 mouseIsPressed &&
                 mouseX > buttonX &&
@@ -243,20 +216,18 @@ export class UI {
                 mouseY > buttonY &&
                 mouseY < buttonY + buttonHeight
             ) {
-                // debounce
                 if (this.clickDebounce === 0) {
                     this.clickDebounce = 1
                     this.buttons[i].onClick()
+                    setTimeout(() => {
+                        this.clickDebounce = 0
+                    }, 500)
                 }
-                setTimeout(() => {
-                    this.clickDebounce = 0
-                }, 500)
             }
         }
     }
 
     drawVisibilityButton() {
-        // draw visibility button on the top right corner
         const buttonSize = 40
         const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30
         const buttonY = this.frame[1] + 30
@@ -273,10 +244,9 @@ export class UI {
         )
 
         fill(0)
-        textAlign(CENTER, CENTER) // set text alignment to center
-        text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2) // center the text
+        textAlign(CENTER, CENTER)
+        text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2)
 
-        // click event
         if (
             mouseIsPressed &&
             mouseX > buttonX &&
@@ -288,115 +258,29 @@ export class UI {
         }
     }
 
-    toggleVisibility() {
-        // TODO: implement visibility toggle
-        return
-    }
-
-    // Draw serial device connection prompt dialog
-    drawSerialPrompt() {
-        const device = TSNDevice.getInstance()
-
-        push()
-        // draw a modal dialog
-        fill(255)
-        strokeWeight(0)
-        rect(...this.serialPromptFrame, 10)
-
-        // draw text
-        fill(0)
-        textAlign(LEFT, TOP)
-        textSize(20)
-        text(
-            'TSN Device',
-            this.serialPromptFrame[0] + 30,
-            this.serialPromptFrame[1] + 30,
-        )
-
-        // draw connect button
-        fill(80)
-        rect(
-            this.serialPromptFrame[0] + this.serialPromptFrame[2] - 130,
-            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 70,
-            100,
-            40,
-            20,
-        )
-
-        fill(255)
-        textAlign(CENTER, CENTER)
-        text(
-            'Connect',
-            this.serialPromptFrame[0] + this.serialPromptFrame[2] - 80,
-            this.serialPromptFrame[1] + this.serialPromptFrame[3] - 50,
-        )
-
-        // click event
-        if (
-            mouseIsPressed &&
-            mouseX >
-                this.serialPromptFrame[0] + this.serialPromptFrame[2] - 130 &&
-            mouseX <
-                this.serialPromptFrame[0] + this.serialPromptFrame[2] - 30 &&
-            mouseY >
-                this.serialPromptFrame[1] + this.serialPromptFrame[3] - 70 &&
-            mouseY < this.serialPromptFrame[1] + this.serialPromptFrame[3] - 30
-        ) {
-            // debounce
-            if (this.clickDebounce === 0) {
-                this.clickDebounce = 1
-                device.connect().then(() => {
-                    this.clickDebounce = 0
-                    device.read()
-                })
-                console.log('Connecting to serial device')
+    animatePropagation(senderX: number, senderY: number, receiverX: number, receiverY: number) {
+        let t = 0
+        const interval = setInterval(() => {
+            t += 0.02
+            if (t > 1) {
+                clearInterval(interval)
+                return
             }
-        }
-
-        // print serial device output
-        device.connections().map((connection, index) => {
-            fill(210)
-            rect(
-                this.serialPromptFrame[0] + 40,
-                this.serialPromptFrame[1] + 37 + 30 * (index + 1),
-                100,
-                26,
-                13,
-            )
-            fill(0)
-            textAlign(LEFT, CENTER)
-            text(
-                connection[0],
-                this.serialPromptFrame[0] + 50,
-                this.serialPromptFrame[1] + 50 + 30 * (index + 1),
-            )
-            text(
-                connection[1],
-                this.serialPromptFrame[0] + 100,
-                this.serialPromptFrame[1] + 50 + 30 * (index + 1),
-            )
-        })
-        pop()
+            const x = lerp(senderX, receiverX, t)
+            const y = lerp(senderY, receiverY, t)
+            fill(255, 0, 0)
+            ellipse(x, y, 10)
+        }, 30)
     }
 
-    // create p5.js rect
     render() {
-        // draw frame
+        if (!this.visible) return
         this.drawFrame()
-
-        // draw avatar
+        push()
         this.drawAvatar()
-
-        // draw ID
         this.drawID()
-
-        // draw buttons
         this.drawButtons()
-
-        // draw visibility button
         this.drawVisibilityButton()
-
-        // draw serial prompt
-        this.drawSerialPrompt()
+        pop()
     }
 }

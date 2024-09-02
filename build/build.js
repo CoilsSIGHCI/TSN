@@ -135,6 +135,39 @@ class Message {
             read: false,
         };
         receiver.inbox.push(flaggedMessage);
+        const senderX = this.sender.vector.x;
+        const senderY = this.sender.vector.y;
+        const receiverX = receiver.vector.x;
+        const receiverY = receiver.vector.y;
+        const canvas = document.createElement('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            let progress = 0;
+            const animationDuration = 1000;
+            const startTime = performance.now();
+            const animate = (currentTime) => {
+                progress = (currentTime - startTime) / animationDuration;
+                if (progress > 1)
+                    progress = 1;
+                const currentX = senderX + (receiverX - senderX) * progress;
+                const currentY = senderY + (receiverY - senderY) * progress;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 10, 0, Math.PI * 2);
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+                else {
+                    document.body.removeChild(canvas);
+                }
+            };
+            requestAnimationFrame(animate);
+        }
     }
 }
 class Pool {
@@ -240,15 +273,17 @@ class Pool {
                 const screenY = point.vector.y * height;
                 ellipse(screenX, screenY, 10, 10);
                 if (point.verified) {
-                    UI.verifiedBadge(screenX + 12, screenY, 10);
+                    AppUI.verifiedBadge(screenX + 12, screenY, 10);
                 }
                 this.drawConnections(point);
             }
         }
     }
     updateClusterForces() {
-        const clusterAttractionStrength = 0.0000;
-        const clusterRepulsionStrength = 0.0000;
+        const clusterAttractionStrength = 0.0001;
+        const clusterRepulsionStrength = 0.000001;
+        const individualRepulsionStrength = 0.0001;
+        const individualDistanceThreshold = 0.05;
         const connectionAttractionStrength = 0.00001;
         const clusterBoundaryForce = 0.00001;
         const clusterRadius = 0.5;
@@ -258,7 +293,7 @@ class Pool {
                 const toPoint = createVector(point.vector.x - cluster.center.x, point.vector.y - cluster.center.y);
                 const distanceFromCenter = toPoint.mag();
                 let attractionForce = toPoint.copy().mult(-1);
-                if (distanceFromCenter > clusterRadius) {
+                if (distanceFromCenter > 0.2) {
                     attractionForce.setMag(clusterBoundaryForce * (distanceFromCenter - clusterRadius));
                 }
                 else {
@@ -278,6 +313,13 @@ class Pool {
                     const connectionForce = createVector(connectedPoint.vector.x - point.vector.x, connectedPoint.vector.y - point.vector.y);
                     connectionForce.setMag(connectionAttractionStrength);
                     point.vector.add(connectionForce);
+                }
+                for (const otherPoint of this.points) {
+                    if (otherPoint !== point && p5.Vector.dist(point.vector, otherPoint.vector) < individualDistanceThreshold) {
+                        const strongRepulsionForce = createVector(point.vector.x - otherPoint.vector.x, point.vector.y - otherPoint.vector.y);
+                        strongRepulsionForce.setMag(individualRepulsionStrength);
+                        point.vector.add(strongRepulsionForce);
+                    }
                 }
                 point.vector.x += (random(-0.5, 0.5) * 0.0001);
                 point.vector.y += (random(-0.5, 0.5) * 0.0001);
@@ -340,14 +382,12 @@ function setup() {
     createCanvas(windowWidth, windowHeight);
     noFill().frameRate(60);
     ui = new UI();
-    ui.enableUpdate();
 }
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 function draw() {
     background(234);
-    const functions = ui.buttons;
     if (tick === growthTicks) {
         pool.updateConnections();
         console.log("update");
@@ -359,5 +399,337 @@ function draw() {
     tick += 1;
     pool.renderPool(ui);
     ui.render();
+}
+class UI {
+    constructor() {
+        this.frame = [30, 30, 40, 60];
+        this.clickDebounce = 0;
+        this.appUI = new AppUI([50, 50, 400, 300]);
+        this.serialPrompt = new SerialPrompt([50, 50, 300, 200]);
+        this.appUI.enableUpdate();
+    }
+    drawToggleButton(target, index) {
+        const buttonSize = 30;
+        const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30;
+        const buttonY = this.frame[1] + 30 + index * (buttonSize + 10);
+        if (target.visible) {
+            fill(200);
+        }
+        else {
+            fill(255);
+        }
+        stroke(0);
+        rect(buttonX, buttonY, buttonSize, buttonSize, 10);
+        fill(0);
+        textAlign(CENTER, CENTER);
+        text(index, buttonX + buttonSize / 2, buttonY + buttonSize / 2);
+        if (mouseIsPressed &&
+            mouseX > buttonX &&
+            mouseX < buttonX + buttonSize &&
+            mouseY > buttonY &&
+            mouseY < buttonY + buttonSize) {
+            if (this.clickDebounce === 0) {
+                this.clickDebounce = 1;
+                target.visible = !target.visible;
+                setTimeout(() => {
+                    this.clickDebounce = 0;
+                }, 500);
+            }
+        }
+    }
+    drawFrame() {
+        fill(255);
+        rect(...this.frame, 10);
+    }
+    render() {
+        this.drawToggleButton(this.appUI, 0);
+        this.drawToggleButton(this.serialPrompt, 1);
+        this.appUI.render();
+        this.serialPrompt.render();
+    }
+}
+class UIPanel {
+    constructor(frame) {
+        this.visible = true;
+        this.frame = frame;
+        this.visible = true;
+        this.clickDebounce = 0;
+    }
+    toggleVisibility() {
+        this.visible = !this.visible;
+    }
+    drawFrame() {
+        push();
+        drawingContext.shadowOffsetY = 8;
+        drawingContext.shadowBlur = 10;
+        drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        strokeWeight(0);
+        fill(255);
+        rect(...this.frame, 10);
+        pop();
+    }
+    render() {
+        if (!this.visible)
+            return;
+        this.drawFrame();
+    }
+}
+class AppUI extends UIPanel {
+    constructor(frame) {
+        super(frame);
+        this.visible = true;
+        this.avatarColor = this.getRandomAvatarColor();
+        this.avatarD = 70;
+        this.avatarX = this.frame[0] + this.avatarD / 2 + 40;
+        this.avatarY = this.frame[1] + this.avatarD / 2 + 30;
+        this.visibilitySketchyLines = [];
+        this.id = this.getRandomID();
+        this.verified = false;
+        this.buttons = [
+            {
+                name: 'LIKE',
+                onClick: () => {
+                    console.log('Button 1 clicked');
+                },
+            },
+            {
+                name: 'FWD',
+                onClick: () => {
+                    console.log('Button 2 clicked');
+                },
+            },
+            {
+                name: 'COM',
+                onClick: () => {
+                    console.log('Button 3 clicked');
+                },
+            },
+            {
+                name: 'SCAM',
+                onClick: () => {
+                    console.log('Button 4 clicked');
+                },
+            },
+        ];
+    }
+    getRandomAvatarColor() {
+        const hue = Math.floor(random(0, 360));
+        const saturation = Math.floor(random(30, 66));
+        const lightness = Math.floor(random(50, 76));
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+    getRandomID() {
+        return Math.floor(random(60, 120));
+    }
+    enableUpdate() {
+        setInterval(() => {
+            this.avatarColor = this.getRandomAvatarColor();
+            this.id = this.getRandomID();
+            this.verified = random() < 0.1;
+        }, 3000);
+    }
+    drawAvatar() {
+        fill(this.avatarColor);
+        ellipse(this.avatarX, this.avatarY, this.avatarD);
+    }
+    static verifiedBadge(x, y, size = 20) {
+        stroke('rgba(0,0,0,0)');
+        fill('rgb(23,176,198)');
+        ellipse(x, y, size);
+        fill(255);
+        ellipse(x, y, (size * 7) / 20);
+    }
+    drawID() {
+        const idX = this.frame[0] + 60 + this.avatarD;
+        const idY = this.frame[1] + 50;
+        fill(180);
+        textSize(18);
+        textAlign(LEFT, CENTER);
+        text('@', idX, idY + 35);
+        rect(idX + 19, idY + 22, this.id * 0.7, 24, 7);
+        fill(121);
+        rect(idX, idY - 15, this.id, 30, 7);
+        if (this.verified) {
+            AppUI.verifiedBadge(idX + this.id + 17, idY);
+        }
+    }
+    drawButtonSketchyOutlines(lines, buttonX, buttonY, buttonWidth, buttonHeight, sketchyLines = 2, overshoot = 3, dithering = 2) {
+        if (lines.length === 0) {
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX = buttonX + random(-dithering, dithering);
+                const startY = buttonY + random(-dithering, dithering) - overshoot;
+                const endX = buttonX + random(-dithering, dithering);
+                const endY = buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot;
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX = buttonX + buttonWidth + random(-dithering, dithering);
+                const startY = buttonY + random(-dithering, dithering) - overshoot;
+                const endX = buttonX + buttonWidth + random(-dithering, dithering);
+                const endY = buttonY +
+                    buttonHeight +
+                    random(-dithering, dithering) +
+                    overshoot;
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX = buttonX + random(-dithering, dithering) - overshoot;
+                const startY = buttonY + buttonHeight + random(-dithering, dithering);
+                const endX = buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot;
+                const endY = buttonY + buttonHeight + random(-dithering, dithering);
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+            for (let j = 0; j < sketchyLines; j++) {
+                const startX = buttonX + random(-dithering, dithering) - overshoot;
+                const startY = buttonY + random(-dithering, dithering);
+                const endX = buttonX +
+                    buttonWidth +
+                    random(-dithering, dithering) +
+                    overshoot;
+                const endY = buttonY + random(-dithering, dithering);
+                lines.push([startX, startY, endX, endY, random(89, 130)]);
+            }
+        }
+        push();
+        for (let j = 0; j < lines.length; j++) {
+            const l = lines[j];
+            stroke(l[4]);
+            line(...l.slice(undefined, 4));
+        }
+        pop();
+    }
+    drawButtons() {
+        const buttonWidth = 60;
+        const buttonHeight = 40;
+        const buttonPadding = 20;
+        for (let i = 0; i < this.buttons.length; i++) {
+            const buttonX = this.frame[0] + i * buttonWidth + 50 + i * buttonPadding;
+            const buttonY = this.frame[1] + this.frame[3] - buttonHeight - 30;
+            fill('rgba(0,0,0,0)');
+            rect(buttonX, buttonY, buttonWidth, buttonHeight);
+            stroke(0);
+            strokeWeight(1);
+            if (this.buttons[i].lines === undefined) {
+                this.buttons[i].lines = [];
+            }
+            this.drawButtonSketchyOutlines(this.buttons[i].lines, buttonX, buttonY, buttonWidth, buttonHeight);
+            fill(0);
+            textAlign(CENTER, CENTER);
+            text(this.buttons[i].name, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+            if (mouseIsPressed &&
+                mouseX > buttonX &&
+                mouseX < buttonX + buttonWidth &&
+                mouseY > buttonY &&
+                mouseY < buttonY + buttonHeight) {
+                if (this.clickDebounce === 0) {
+                    this.clickDebounce = 1;
+                    this.buttons[i].onClick();
+                    setTimeout(() => {
+                        this.clickDebounce = 0;
+                    }, 500);
+                }
+            }
+        }
+    }
+    drawVisibilityButton() {
+        const buttonSize = 40;
+        const buttonX = this.frame[0] + this.frame[2] - buttonSize - 30;
+        const buttonY = this.frame[1] + 30;
+        fill(255);
+        stroke(0);
+        this.drawButtonSketchyOutlines(this.visibilitySketchyLines, buttonX, buttonY, buttonSize, buttonSize);
+        fill(0);
+        textAlign(CENTER, CENTER);
+        text('👁️', buttonX + buttonSize / 2, buttonY + buttonSize / 2);
+        if (mouseIsPressed &&
+            mouseX > buttonX &&
+            mouseX < buttonX + buttonSize &&
+            mouseY > buttonY &&
+            mouseY < buttonY + buttonSize) {
+            this.toggleVisibility();
+        }
+    }
+    animatePropagation(senderX, senderY, receiverX, receiverY) {
+        let t = 0;
+        const interval = setInterval(() => {
+            t += 0.02;
+            if (t > 1) {
+                clearInterval(interval);
+                return;
+            }
+            const x = lerp(senderX, receiverX, t);
+            const y = lerp(senderY, receiverY, t);
+            fill(255, 0, 0);
+            ellipse(x, y, 10);
+        }, 30);
+    }
+    render() {
+        if (!this.visible)
+            return;
+        this.drawFrame();
+        push();
+        this.drawAvatar();
+        this.drawID();
+        this.drawButtons();
+        this.drawVisibilityButton();
+        pop();
+    }
+}
+class SerialPrompt extends UIPanel {
+    constructor(frame) {
+        super(frame);
+        this.visible = false;
+    }
+    drawSerialPrompt() {
+        const device = TSNDevice.getInstance();
+        push();
+        fill(255);
+        strokeWeight(0);
+        rect(...this.frame, 10);
+        fill(0);
+        textAlign(LEFT, TOP);
+        textSize(20);
+        text('TSN Device', this.frame[0] + 30, this.frame[1] + 30);
+        fill(80);
+        rect(this.frame[0] + this.frame[2] - 130, this.frame[1] + this.frame[3] - 70, 100, 40, 20);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        text('Connect', this.frame[0] + this.frame[2] - 80, this.frame[1] + this.frame[3] - 50);
+        if (mouseIsPressed &&
+            mouseX > this.frame[0] + this.frame[2] - 130 &&
+            mouseX < this.frame[0] + this.frame[2] - 30 &&
+            mouseY > this.frame[1] + this.frame[3] - 70 &&
+            mouseY < this.frame[1] + this.frame[3] - 30) {
+            if (this.clickDebounce === 0) {
+                this.clickDebounce = 1;
+                device.connect().then(() => {
+                    this.clickDebounce = 0;
+                    device.read();
+                });
+                console.log('Connecting to serial device');
+            }
+        }
+        device.connections().map((connection, index) => {
+            fill(210);
+            rect(this.frame[0] + 40, this.frame[1] + 37 + 30 * (index + 1), 100, 26, 13);
+            fill(0);
+            textAlign(LEFT, CENTER);
+            text(connection[0], this.frame[0] + 50, this.frame[1] + 50 + 30 * (index + 1));
+            text(connection[1], this.frame[0] + 100, this.frame[1] + 50 + 30 * (index + 1));
+        });
+        pop();
+    }
+    render() {
+        if (!this.visible)
+            return;
+        this.drawFrame();
+        this.drawSerialPrompt();
+    }
 }
 //# sourceMappingURL=build.js.map
