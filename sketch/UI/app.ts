@@ -16,6 +16,7 @@ class AppUI extends UIPanel {
     id: number = this.getRandomID()
     verified = false
     serialPrompt: SerialPrompt
+    animatingMessages: { message: Message, receiver: Individual }[] = []
 
     constructor(frame: [number, number, number, number]) {
         super(frame)
@@ -294,6 +295,34 @@ class AppUI extends UIPanel {
         }, 30)
     }
 
+    updateAnimations() {
+        for (let i = this.animatingMessages.length - 1; i >= 0; i--) {
+            const anim = this.animatingMessages[i]
+            anim.message.animationProgress += 0.02
+            if (anim.message.animationProgress >= 1) {
+                this.animatingMessages.splice(i, 1)
+            }
+        }
+    }
+
+    drawAnimations() {
+        for (const anim of this.animatingMessages) {
+            const { message, receiver } = anim
+            const progress = message.animationProgress
+            const senderX = message.sender.vector.x
+            const senderY = message.sender.vector.y
+            const receiverX = receiver.vector.x
+            const receiverY = receiver.vector.y
+
+            const currentX = lerp(senderX, receiverX, progress)
+            const currentY = lerp(senderY, receiverY, progress)
+
+            fill(255, 0, 0)
+            noStroke()
+            ellipse(currentX, currentY, 10)
+        }
+    }
+
     render(panelOffset: p5.Vector) {
         this.panelOffset = panelOffset
         this.drawFrame()
@@ -303,6 +332,8 @@ class AppUI extends UIPanel {
         this.drawID()
         this.drawButtons()
         this.drawVisibilityButton()
+        this.updateAnimations()
+        this.drawAnimations()
         pop()
     }
 }

@@ -3,6 +3,7 @@ class UI {
     clickDebounce = 0
     appUI: AppUI
     serialPrompt: SerialPrompt
+    legend: Legend
 
     panelStack: UIPanel[] = []
 
@@ -10,7 +11,8 @@ class UI {
         this.appUI = new AppUI([50, 50, 400, 300])
         this.serialPrompt = new SerialPrompt([50, 50, 300, 200])
         this.appUI.enableUpdate()
-        this.panelStack.push(this.appUI, this.serialPrompt)
+        this.legend = new Legend([50, 50, 300, 260])
+        this.panelStack.push(this.serialPrompt, this.legend)
     }
 
     drawToggleButton(target: UIPanel, index: number) {
@@ -64,6 +66,7 @@ class UI {
     render() {
         this.drawToggleButton(this.appUI, 0)
         this.drawToggleButton(this.serialPrompt, 1)
+        this.drawToggleButton(this.legend, 2)
 
         let stackOffset = createVector(0, 0)
 

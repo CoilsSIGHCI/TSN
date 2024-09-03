@@ -4,10 +4,15 @@ type MessageProperty = {
     attractive: number
 }
 
+const animatingMessages: Message[] = []
+
 class Message {
     sender: Individual
     property: MessageProperty
     topic: string
+    animationProgress: number = 0
+    animationDelay: number = random(0, 200)
+    receiver: Individual | null = null
 
     constructor(sender: Individual, property: MessageProperty, topic: string) {
         this.sender = sender
@@ -22,45 +27,91 @@ class Message {
         }
         receiver.inbox.push(flaggedMessage)
 
-        // Visualize the propagation
-        const senderX = this.sender.vector.x
-        const senderY = this.sender.vector.y
-        const receiverX = receiver.vector.x
-        const receiverY = receiver.vector.y
+        // Start the animation
+        this.receiver = receiver
+        this.animationProgress = 0
 
-        // Create a canvas element
-        const canvas = document.createElement('canvas')
-        canvas.width = window.innerWidth
-        canvas.height = window.innerHeight
-        document.body.appendChild(canvas)
-        const ctx = canvas.getContext('2d')
+        // Add this message to the animatingMessages array
+        animatingMessages.push(this)
+    }
 
-        if (ctx) {
-            let progress = 0
-            const animationDuration = 1000 // 1 second
-            const startTime = performance.now()
-
-            const animate = (currentTime: number) => {
-                progress = (currentTime - startTime) / animationDuration
-                if (progress > 1) progress = 1
-
-                const currentX = senderX + (receiverX - senderX) * progress
-                const currentY = senderY + (receiverY - senderY) * progress
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height)
-                ctx.beginPath()
-                ctx.arc(currentX, currentY, 10, 0, Math.PI * 2)
-                ctx.fillStyle = 'blue'
-                ctx.fill()
-
-                if (progress < 1) {
-                    requestAnimationFrame(animate)
-                } else {
-                    document.body.removeChild(canvas)
+    update() {
+        if (this.animationDelay > 0) {
+            this.animationDelay -= 1
+            return
+        }
+        if (this.animationProgress < 1) {
+            this.animationProgress += 0.02
+            if (this.animationProgress >= 1) {
+                this.animationProgress = 1
+                // Remove this message from the animatingMessages array
+                const index = animatingMessages.indexOf(this)
+                if (index > -1) {
+                    animatingMessages.splice(index, 1)
                 }
             }
-
-            requestAnimationFrame(animate)
         }
+    }
+
+    draw() {
+        if (this.animationDelay > 0) {
+            return
+        }
+        if (this.animationProgress < 1) {
+            const senderX = this.sender.vector.x * width
+            const senderY = this.sender.vector.y * height
+            const receiverX = this.receiver.vector.x * width
+            const receiverY = this.receiver.vector.y * height
+
+            // Calculate the total distance in pixels
+            const totalDistance = dist(senderX, senderY, receiverX, receiverY)
+            
+            // Calculate the current distance based on animation progress
+            const currentDistance = totalDistance * this.animationProgress
+            
+            // Round the current distance to the nearest pixel
+            const roundedDistance = round(currentDistance)
+            
+            // Calculate the actual progress based on rounded distance
+            const actualProgress = roundedDistance / totalDistance
+
+            const currentX = lerp(senderX, receiverX, actualProgress)
+            const currentY = lerp(senderY, receiverY, actualProgress)
+
+            push()
+            const color = Message.getMessageColor(this.property)
+            blendMode(HARD_LIGHT)
+            fill(color)
+            noStroke()
+
+            // Calculate rotation angle
+            const angle = atan2(receiverY - senderY, receiverX - senderX)
+
+            // Apply rotation and draw ellipse
+            translate(currentX, currentY)
+            rotate(angle)
+            ellipse(0, 0, 20, abs(this.animationProgress - 0.5) * 20)
+            
+            pop()
+        }
+    }
+
+    static getMessageColor(property: MessageProperty): p5.Color {
+        const { aggressive, integrity, attractive } = property
+    // Normalize values to 0-1 range
+        const r = 1 - aggressive
+        const g = 1 - integrity
+        const b = 1 - attractive
+
+        // Create and return the color
+        return color(r * 255, g * 255, b * 255, 200)
+    }
+}
+
+// Add a new function to update and draw all animating messages
+function updateAndDrawAnimatingMessages() {
+    for (const message of animatingMessages) {
+        message.update()
+        message.draw()
     }
 }

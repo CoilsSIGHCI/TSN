@@ -7,7 +7,7 @@ let pool: Pool
 let clusterSizeTable: ClusterSizeTable
 
 let tick = 0
-let growthTicks = 180
+let growthTicks = 60
 
 // P5 WILL AUTOMATICALLY USE GLOBAL MODE IF A DRAW() FUNCTION IS DEFINED
 function setup() {
@@ -38,12 +38,20 @@ function setup() {
             center: createVector(0.5, 0.5),
             enabled: true,
         },
+        5: {
+            size: 10,
+            center: createVector(0.8, 0.6),
+            enabled: true,
+        },
     }
     pool = new Pool(clusterSizeTable)
     createCanvas(windowWidth, windowHeight)
     noFill().frameRate(60)
 
     ui = new UI()
+
+    // Font
+    textFont('monospace')
 }
 
 // p5 WILL AUTO RUN THIS FUNCTION IF THE BROWSER WINDOW SIZE CHANGES
@@ -55,6 +63,8 @@ function windowResized() {
 function draw() {
     // CLEAR BACKGROUND
     background(234)
+    
+    updateAndDrawAnimatingMessages()
 
     // Grow
     if (tick === growthTicks) {
@@ -62,6 +72,7 @@ function draw() {
         console.log('update')
         pool.points.forEach((point) => {
             point.grow()
+            point.post()
         })
         tick = 0
     }
@@ -71,4 +82,5 @@ function draw() {
     pool.renderPool(ui)
 
     ui.render()
+    
 }

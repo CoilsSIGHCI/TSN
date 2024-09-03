@@ -68,8 +68,7 @@ class Individual {
     grow() {
         const unreadMessages = this.inbox.filter((message) => !message.read);
         for (let message of unreadMessages) {
-            const response = this.post(message);
-            this.connections.forEach((connection) => response.propagate(connection));
+            this.post(message);
             const aggressiveImpact = (message.property.aggressive - this.personality.agreeableness) *
                 0.1;
             const integrityImpact = (message.property.integrity -
@@ -89,14 +88,33 @@ class Individual {
             message.read = true;
         }
     }
+    wannaPost() {
+        return random() < this.personality.extraversion;
+    }
+    wannaReply(message) {
+        return random() < this.personality.extraversion * 2;
+    }
     post(originalMessage) {
+        var _a;
         const property = {
             aggressive: this.calculateAggressiveness(originalMessage),
             integrity: this.calculateIntegrity(originalMessage),
             attractive: this.calculateAttractiveness(originalMessage),
         };
-        const topic = originalMessage ? originalMessage.topic : '';
-        return new Message(this, property, topic);
+        if (!originalMessage) {
+            this.inbox = this.inbox.filter((message) => !message.read);
+            if (this.inbox.length > 0) {
+                for (let message of this.inbox) {
+                    if (this.wannaReply(message))
+                        this.post(message);
+                }
+            }
+        }
+        if (this.wannaPost()) {
+            const randomConnection = this.connections[Math.floor(Math.random() * this.connections.length)];
+            const message = new Message(this, property, (_a = originalMessage === null || originalMessage === void 0 ? void 0 : originalMessage.topic) !== null && _a !== void 0 ? _a : '');
+            message.propagate(randomConnection);
+        }
     }
     calculateAggressiveness(message) {
         let base = 1 - this.personality.agreeableness;
@@ -121,8 +139,12 @@ class Individual {
     }
 }
 const OpenAIKey = '';
+const animatingMessages = [];
 class Message {
     constructor(sender, property, topic) {
+        this.animationProgress = 0;
+        this.animationDelay = random(0, 200);
+        this.receiver = null;
         this.sender = sender;
         this.property = property;
         this.topic = topic;
@@ -133,39 +155,65 @@ class Message {
             read: false,
         };
         receiver.inbox.push(flaggedMessage);
-        const senderX = this.sender.vector.x;
-        const senderY = this.sender.vector.y;
-        const receiverX = receiver.vector.x;
-        const receiverY = receiver.vector.y;
-        const canvas = document.createElement('canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        document.body.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            let progress = 0;
-            const animationDuration = 1000;
-            const startTime = performance.now();
-            const animate = (currentTime) => {
-                progress = (currentTime - startTime) / animationDuration;
-                if (progress > 1)
-                    progress = 1;
-                const currentX = senderX + (receiverX - senderX) * progress;
-                const currentY = senderY + (receiverY - senderY) * progress;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.beginPath();
-                ctx.arc(currentX, currentY, 10, 0, Math.PI * 2);
-                ctx.fillStyle = 'blue';
-                ctx.fill();
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                }
-                else {
-                    document.body.removeChild(canvas);
-                }
-            };
-            requestAnimationFrame(animate);
+        this.receiver = receiver;
+        this.animationProgress = 0;
+        animatingMessages.push(this);
+    }
+    update() {
+        if (this.animationDelay > 0) {
+            this.animationDelay -= 1;
+            return;
         }
+        if (this.animationProgress < 1) {
+            this.animationProgress += 0.02;
+            if (this.animationProgress >= 1) {
+                this.animationProgress = 1;
+                const index = animatingMessages.indexOf(this);
+                if (index > -1) {
+                    animatingMessages.splice(index, 1);
+                }
+            }
+        }
+    }
+    draw() {
+        if (this.animationDelay > 0) {
+            return;
+        }
+        if (this.animationProgress < 1) {
+            const senderX = this.sender.vector.x * width;
+            const senderY = this.sender.vector.y * height;
+            const receiverX = this.receiver.vector.x * width;
+            const receiverY = this.receiver.vector.y * height;
+            const totalDistance = dist(senderX, senderY, receiverX, receiverY);
+            const currentDistance = totalDistance * this.animationProgress;
+            const roundedDistance = round(currentDistance);
+            const actualProgress = roundedDistance / totalDistance;
+            const currentX = lerp(senderX, receiverX, actualProgress);
+            const currentY = lerp(senderY, receiverY, actualProgress);
+            push();
+            const color = Message.getMessageColor(this.property);
+            blendMode(HARD_LIGHT);
+            fill(color);
+            noStroke();
+            const angle = atan2(receiverY - senderY, receiverX - senderX);
+            translate(currentX, currentY);
+            rotate(angle);
+            ellipse(0, 0, 20, abs(this.animationProgress - 0.5) * 20);
+            pop();
+        }
+    }
+    static getMessageColor(property) {
+        const { aggressive, integrity, attractive } = property;
+        const r = 1 - aggressive;
+        const g = 1 - integrity;
+        const b = 1 - attractive;
+        return color(r * 255, g * 255, b * 255, 200);
+    }
+}
+function updateAndDrawAnimatingMessages() {
+    for (const message of animatingMessages) {
+        message.update();
+        message.draw();
     }
 }
 class Pool {
@@ -253,39 +301,12 @@ class Pool {
             individual.connections.push(connection);
         }
     }
-    renderPool(ui) {
-        this.updateClusterForces();
-        for (const clusterId in this.clusters) {
-            const cluster = this.clusters[clusterId];
-            if (cluster.enabled) {
-                noFill();
-                stroke('rgba(100,100,100,0.2)');
-                const screenX = cluster.center.x * width;
-                const screenY = cluster.center.y * height;
-                ellipse(screenX, screenY, 5 * cluster.size, 5 * cluster.size);
-            }
-        }
-        for (let i = 0; i < this.points.length; i++) {
-            const point = this.points[i];
-            if (this.clusters[point.clusterId].enabled) {
-                stroke('rgba(0,0,0,0)');
-                fill(`rgba(${(point.clusterId * 50) % 255},${(point.clusterId * 100) % 255},${(point.clusterId * 150) % 255},0.8)`);
-                const screenX = point.vector.x * width;
-                const screenY = point.vector.y * height;
-                ellipse(screenX, screenY, 10, 10);
-                if (point.verified) {
-                    AppUI.verifiedBadge(screenX + 12, screenY, 10);
-                }
-                this.drawConnections(point);
-            }
-        }
-    }
     updateClusterForces() {
         const clusterAttractionStrength = 0.0001;
         const clusterRepulsionStrength = 0.000001;
-        const individualRepulsionStrength = 0.0001;
+        const individualRepulsionStrength = 0.0002;
         const individualDistanceThreshold = 0.05;
-        const connectionAttractionStrength = 0.00001;
+        const connectionAttractionStrength = 0.00005;
         const clusterBoundaryForce = 0.00001;
         const clusterRadius = 0.5;
         for (const point of this.points) {
@@ -341,12 +362,65 @@ class Pool {
         }
     }
     drawConnections(point) {
+        push();
         for (let i = 0; i < point.connections.length; i++) {
             const otherPoint = point.connections[i];
             const alpha = 0.5 - i * 0.1;
+            strokeWeight(0.5);
             stroke(`rgba(100,100,100,${alpha > 0 ? alpha : 0.1})`);
-            line(point.vector.x * width, point.vector.y * height, otherPoint.vector.x * width, otherPoint.vector.y * height);
+            const mid1X = point.vector.x + (otherPoint.vector.x - point.vector.x) / 3;
+            const mid1Y = point.vector.y + (otherPoint.vector.y - point.vector.y) / 3;
+            const mid2X = point.vector.x +
+                ((otherPoint.vector.x - point.vector.x) / 3) * 2;
+            const mid2Y = point.vector.y +
+                ((otherPoint.vector.y - point.vector.y) / 3) * 2;
+            const offset1X = (2 - parseInt(otherPoint.vector.y.toString(5).charAt(4))) / 20;
+            const offset1Y = (2 - parseInt(otherPoint.vector.x.toString(5).charAt(3))) / 20;
+            const offset2X = (2 - parseInt(otherPoint.vector.y.toString(5).charAt(3))) / 20;
+            const offset2Y = (2 - parseInt(otherPoint.vector.x.toString(5).charAt(4))) / 20;
+            noFill();
+            curve((mid1X + offset1X) * width, (mid1Y + offset1Y) * height, point.vector.x * width, point.vector.y * height, otherPoint.vector.x * width, otherPoint.vector.y * height, (mid2X + offset2X) * width, (mid2Y + offset2Y) * height);
         }
+        pop();
+    }
+    renderPool() {
+        this.updateClusterForces();
+        push();
+        for (const clusterId in this.clusters) {
+            const cluster = this.clusters[clusterId];
+            if (cluster.enabled) {
+                noFill();
+                strokeWeight(0.5);
+                stroke('rgba(100,100,100,0.2)');
+                const screenX = cluster.center.x * width;
+                const screenY = cluster.center.y * height;
+                ellipse(screenX, screenY, 5 * cluster.size, 5 * cluster.size);
+                textSize(72);
+                textFont('monospace');
+                textStyle(BOLD);
+                textAlign(CENTER, CENTER);
+                fill(0, 0, 0, 30);
+                text(clusterId, screenX, screenY + 2.5 * cluster.size);
+            }
+        }
+        pop();
+        push();
+        for (let i = 0; i < this.points.length; i++) {
+            const point = this.points[i];
+            if (this.clusters[point.clusterId].enabled) {
+                stroke('rgba(0,0,0,0)');
+                fill(`rgba(${(point.clusterId * 50) % 255},${(point.clusterId * 100) % 255},${(point.clusterId * 150) % 255},0.8)`);
+                const screenX = point.vector.x * width;
+                const screenY = point.vector.y * height;
+                const distanceToCenter = p5.Vector.dist(point.vector, this.clusters[point.clusterId].center);
+                ellipse(screenX, screenY, 200 * max(0.05, 0.1 - distanceToCenter));
+                if (point.verified) {
+                    AppUI.verifiedBadge(screenX + 12, screenY, 10);
+                }
+                this.drawConnections(point);
+            }
+        }
+        pop();
     }
 }
 let numberOfShapesControl;
@@ -354,7 +428,7 @@ let ui;
 let pool;
 let clusterSizeTable;
 let tick = 0;
-let growthTicks = 180;
+let growthTicks = 60;
 function setup() {
     console.log('🚀 - Setup initialized - P5 is running');
     clusterSizeTable = {
@@ -383,22 +457,30 @@ function setup() {
             center: createVector(0.5, 0.5),
             enabled: true,
         },
+        5: {
+            size: 10,
+            center: createVector(0.8, 0.6),
+            enabled: true,
+        },
     };
     pool = new Pool(clusterSizeTable);
     createCanvas(windowWidth, windowHeight);
     noFill().frameRate(60);
     ui = new UI();
+    textFont('monospace');
 }
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 function draw() {
     background(234);
+    updateAndDrawAnimatingMessages();
     if (tick === growthTicks) {
         pool.updateConnections();
         console.log('update');
         pool.points.forEach((point) => {
             point.grow();
+            point.post();
         });
         tick = 0;
     }
@@ -414,7 +496,8 @@ class UI {
         this.appUI = new AppUI([50, 50, 400, 300]);
         this.serialPrompt = new SerialPrompt([50, 50, 300, 200]);
         this.appUI.enableUpdate();
-        this.panelStack.push(this.appUI, this.serialPrompt);
+        this.legend = new Legend([50, 50, 300, 260]);
+        this.panelStack.push(this.serialPrompt, this.legend);
     }
     drawToggleButton(target, index) {
         var _a;
@@ -459,6 +542,7 @@ class UI {
     render() {
         this.drawToggleButton(this.appUI, 0);
         this.drawToggleButton(this.serialPrompt, 1);
+        this.drawToggleButton(this.legend, 2);
         let stackOffset = createVector(0, 0);
         for (const panel of this.panelStack) {
             panel.render(stackOffset);
@@ -511,6 +595,7 @@ class AppUI extends UIPanel {
         this.visibilitySketchyLines = [];
         this.id = this.getRandomID();
         this.verified = false;
+        this.animatingMessages = [];
         this.description = 'App UI';
         this.buttons = [
             {
@@ -697,6 +782,30 @@ class AppUI extends UIPanel {
             ellipse(x, y, 10);
         }, 30);
     }
+    updateAnimations() {
+        for (let i = this.animatingMessages.length - 1; i >= 0; i--) {
+            const anim = this.animatingMessages[i];
+            anim.message.animationProgress += 0.02;
+            if (anim.message.animationProgress >= 1) {
+                this.animatingMessages.splice(i, 1);
+            }
+        }
+    }
+    drawAnimations() {
+        for (const anim of this.animatingMessages) {
+            const { message, receiver } = anim;
+            const progress = message.animationProgress;
+            const senderX = message.sender.vector.x;
+            const senderY = message.sender.vector.y;
+            const receiverX = receiver.vector.x;
+            const receiverY = receiver.vector.y;
+            const currentX = lerp(senderX, receiverX, progress);
+            const currentY = lerp(senderY, receiverY, progress);
+            fill(255, 0, 0);
+            noStroke();
+            ellipse(currentX, currentY, 10);
+        }
+    }
     render(panelOffset) {
         this.panelOffset = panelOffset;
         this.drawFrame();
@@ -706,7 +815,89 @@ class AppUI extends UIPanel {
         this.drawID();
         this.drawButtons();
         this.drawVisibilityButton();
+        this.updateAnimations();
+        this.drawAnimations();
         pop();
+    }
+}
+class Legend extends UIPanel {
+    constructor(frame) {
+        super(frame);
+        this.description = 'Legends';
+    }
+    drawLegend() {
+        push();
+        fill(255);
+        strokeWeight(0);
+        rect(...this.getOffsetFrame(), 10);
+        fill(0);
+        textAlign(LEFT, TOP);
+        textSize(20);
+        text(this.description, this.getOffsetFrame()[0] + 30, this.getOffsetFrame()[1] + 30);
+        this.drawGradient(Message.getMessageColor({
+            aggressive: 0,
+            integrity: 0,
+            attractive: 0,
+        }), Message.getMessageColor({
+            aggressive: 1,
+            integrity: 0,
+            attractive: 0,
+        }), this.getOffsetFrame()[1] + 70);
+        this.drawAverageLine('aggressive', this.getOffsetFrame()[1] + 70);
+        this.drawLegendText('Aggressive', this.getOffsetFrame()[1] + 100);
+        this.drawGradient(Message.getMessageColor({
+            aggressive: 0,
+            integrity: 0,
+            attractive: 0,
+        }), Message.getMessageColor({
+            aggressive: 0,
+            integrity: 1,
+            attractive: 0,
+        }), this.getOffsetFrame()[1] + 130);
+        this.drawAverageLine('integrity', this.getOffsetFrame()[1] + 130);
+        this.drawLegendText('Integrity', this.getOffsetFrame()[1] + 160);
+        this.drawGradient(Message.getMessageColor({
+            aggressive: 0,
+            integrity: 0,
+            attractive: 0,
+        }), Message.getMessageColor({
+            aggressive: 0,
+            integrity: 0,
+            attractive: 1,
+        }), this.getOffsetFrame()[1] + 190);
+        this.drawAverageLine('attractive', this.getOffsetFrame()[1] + 190);
+        this.drawLegendText('Attractive', this.getOffsetFrame()[1] + 220);
+        pop();
+    }
+    drawGradient(startColour, endColour, y) {
+        for (let x = this.getOffsetFrame()[0]; x < this.getOffsetFrame()[0] + this.getOffsetFrame()[2]; x += 1) {
+            const colour = color(lerpColor(startColour, endColour, x / (this.getOffsetFrame()[0] + this.getOffsetFrame()[2])));
+            fill(colour);
+            rect(x, y, 1, 20);
+        }
+    }
+    drawLegendText(type, y) {
+        fill(0);
+        textAlign(LEFT, TOP);
+        textSize(14);
+        text(type, this.getOffsetFrame()[0] + 30, y);
+    }
+    drawAverageLine(type, y) {
+        push();
+        const average = animatingMessages.reduce((acc, curr) => {
+            return acc + curr.property[type];
+        }, 0) / animatingMessages.length;
+        const x = this.getOffsetFrame()[0] + (this.getOffsetFrame()[2] * average);
+        strokeWeight(2);
+        stroke(0);
+        fill(255);
+        rect(x, y, 10, 20, 5, 5, 5, 5);
+        pop();
+    }
+    render(panelOffset) {
+        this.panelOffset = panelOffset;
+        this.drawFrame();
+        this.drawLegend();
     }
 }
 class SerialPrompt extends UIPanel {
