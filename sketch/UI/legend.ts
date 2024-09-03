@@ -103,9 +103,9 @@ class Legend extends UIPanel {
 
     private drawLegendText(type: string, y: number) {
         fill(0)
-        textAlign(LEFT, TOP)
+        textAlign(RIGHT, TOP)
         textSize(14)
-        text(type, this.getOffsetFrame()[0] + 30, y)
+        text(type, this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 10, y)
     }
 
     private drawAverageLine(type: keyof MessageProperty, y: number) {

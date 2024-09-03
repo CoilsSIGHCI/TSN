@@ -119,12 +119,16 @@ class Individual {
             }
         }
 
-        if (this.wannaPost()) {
-            const randomConnection =
-                this.connections[
-                    Math.floor(Math.random() * this.connections.length)
-                ]
-            const message = new Message(this, property, originalMessage?.topic ?? '')
+        const randomConnection =
+            this.connections[
+                Math.floor(Math.random() * this.connections.length)
+            ]
+        if (this.wannaPost() && randomConnection) {
+            const message = new Message(
+                this,
+                property,
+                originalMessage?.topic ?? ''
+            )
             message.propagate(randomConnection)
         }
     }

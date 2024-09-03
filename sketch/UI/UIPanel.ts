@@ -13,9 +13,9 @@ class UIPanel {
     drawFrame() {
         push()
 
-        drawingContext.shadowOffsetY = 2
-        drawingContext.shadowBlur = 4
-        drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)'
+        // drawingContext.shadowOffsetY = 2
+        // drawingContext.shadowBlur = 4
+        // drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)'
         strokeWeight(0)
         fill(255)
 

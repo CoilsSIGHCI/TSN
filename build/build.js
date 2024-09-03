@@ -110,8 +110,8 @@ class Individual {
                 }
             }
         }
-        if (this.wannaPost()) {
-            const randomConnection = this.connections[Math.floor(Math.random() * this.connections.length)];
+        const randomConnection = this.connections[Math.floor(Math.random() * this.connections.length)];
+        if (this.wannaPost() && randomConnection) {
             const message = new Message(this, property, (_a = originalMessage === null || originalMessage === void 0 ? void 0 : originalMessage.topic) !== null && _a !== void 0 ? _a : '');
             message.propagate(randomConnection);
         }
@@ -241,7 +241,6 @@ class Pool {
     }
     async updateConnections() {
         const hardwareConnections = TSNDevice.getInstance().connections();
-        console.log(hardwareConnections);
         this.points.forEach((point) => {
             point.connections = point.connections.filter((conn) => conn.clusterId === point.clusterId);
         });
@@ -255,7 +254,7 @@ class Pool {
     }
     createInternalConnectionsByDistance(clusterPoints) {
         const maxConnections = 3;
-        const connectionThreshold = 0.03 * min(screenX, screenY);
+        const connectionThreshold = 0.1;
         for (let i = 0; i < clusterPoints.length; i++) {
             const point = clusterPoints[i];
             const distances = clusterPoints
@@ -485,7 +484,7 @@ function draw() {
         tick = 0;
     }
     tick += 1;
-    pool.renderPool(ui);
+    pool.renderPool();
     ui.render();
 }
 class UI {
@@ -559,9 +558,6 @@ class UIPanel {
     }
     drawFrame() {
         push();
-        drawingContext.shadowOffsetY = 2;
-        drawingContext.shadowBlur = 4;
-        drawingContext.shadowColor = 'rgba(0, 0, 0, 0.5)';
         strokeWeight(0);
         fill(255);
         const newFrame = [
@@ -878,9 +874,9 @@ class Legend extends UIPanel {
     }
     drawLegendText(type, y) {
         fill(0);
-        textAlign(LEFT, TOP);
+        textAlign(RIGHT, TOP);
         textSize(14);
-        text(type, this.getOffsetFrame()[0] + 30, y);
+        text(type, this.getOffsetFrame()[0] + this.getOffsetFrame()[2] - 10, y);
     }
     drawAverageLine(type, y) {
         push();

@@ -47,8 +47,6 @@ class Pool {
     async updateConnections() {
         const hardwareConnections = TSNDevice.getInstance().connections()
 
-        console.log(hardwareConnections)
-
         // Clear all existing inter-cluster connections
         this.points.forEach((point) => {
             point.connections = point.connections.filter(
@@ -72,7 +70,9 @@ class Pool {
 
     private createInternalConnectionsByDistance(clusterPoints: Individual[]) {
         const maxConnections = 3 // Maximum number of connections per individual
-        const connectionThreshold = 0.03 * min(screenX, screenY) // Adjust this value to control the connection distance
+        const connectionThreshold = 0.1 // Adjust this value to control the connection distance
+
+        
 
         for (let i = 0; i < clusterPoints.length; i++) {
             const point = clusterPoints[i]

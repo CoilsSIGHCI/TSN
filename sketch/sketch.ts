@@ -79,7 +79,7 @@ function draw() {
 
     tick += 1
 
-    pool.renderPool(ui)
+    pool.renderPool()
 
     ui.render()
     
