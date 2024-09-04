@@ -7,7 +7,7 @@ let pool: Pool
 let clusterSizeTable: ClusterSizeTable
 
 let tick = 0
-let growthTicks = 60
+let growthTicks = 24
 
 // P5 WILL AUTOMATICALLY USE GLOBAL MODE IF A DRAW() FUNCTION IS DEFINED
 function setup() {

@@ -427,7 +427,7 @@ let ui;
 let pool;
 let clusterSizeTable;
 let tick = 0;
-let growthTicks = 60;
+let growthTicks = 24;
 function setup() {
     console.log('🚀 - Setup initialized - P5 is running');
     clusterSizeTable = {
