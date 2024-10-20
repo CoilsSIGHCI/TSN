@@ -65,13 +65,13 @@ class Message {
 
             // Calculate the total distance in pixels
             const totalDistance = dist(senderX, senderY, receiverX, receiverY)
-            
+
             // Calculate the current distance based on animation progress
             const currentDistance = totalDistance * this.animationProgress
-            
+
             // Round the current distance to the nearest pixel
             const roundedDistance = round(currentDistance)
-            
+
             // Calculate the actual progress based on rounded distance
             const actualProgress = roundedDistance / totalDistance
 
@@ -91,14 +91,14 @@ class Message {
             translate(currentX, currentY)
             rotate(angle)
             ellipse(0, 0, 20, abs(this.animationProgress - 0.5) * 20)
-            
+
             pop()
         }
     }
 
     static getMessageColor(property: MessageProperty): p5.Color {
         const { aggressive, integrity, attractive } = property
-    // Normalize values to 0-1 range
+        // Normalize values to 0-1 range
         const r = 1 - aggressive
         const g = 1 - integrity
         const b = 1 - attractive

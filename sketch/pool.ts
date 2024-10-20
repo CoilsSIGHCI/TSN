@@ -26,14 +26,14 @@ class Pool {
                 const radius = random(0, 0.002 * property.size)
                 const offset = createVector(
                     radius * cos(theta),
-                    radius * sin(theta)
+                    radius * sin(theta),
                 )
                 const position = p5.Vector.add(property.center, offset)
                 const newIndividual = new Individual(
                     position,
                     undefined,
                     undefined,
-                    id
+                    id,
                 )
                 this.points.push(newIndividual)
                 clusterPoints.push(newIndividual)
@@ -50,7 +50,7 @@ class Pool {
         // Clear all existing inter-cluster connections
         this.points.forEach((point) => {
             point.connections = point.connections.filter(
-                (conn) => conn.clusterId === point.clusterId
+                (conn) => conn.clusterId === point.clusterId,
             )
         })
 
@@ -62,7 +62,7 @@ class Pool {
             if (this.clusters[cluster1Id] && this.clusters[cluster2Id]) {
                 this.createRandomConnectionsBetweenClusters(
                     cluster1Id,
-                    cluster2Id
+                    cluster2Id,
                 )
             }
         })
@@ -71,8 +71,6 @@ class Pool {
     private createInternalConnectionsByDistance(clusterPoints: Individual[]) {
         const maxConnections = 3 // Maximum number of connections per individual
         const connectionThreshold = 0.1 // Adjust this value to control the connection distance
-
-        
 
         for (let i = 0; i < clusterPoints.length; i++) {
             const point = clusterPoints[i]
@@ -103,7 +101,7 @@ class Pool {
 
     private createRandomConnectionsBetweenClusters(
         cluster1Id: number,
-        cluster2Id: number
+        cluster2Id: number,
     ) {
         const points1 = this.points.filter((p) => p.clusterId === cluster1Id)
         const points2 = this.points.filter((p) => p.clusterId === cluster2Id)
@@ -114,13 +112,13 @@ class Pool {
             random(
                 min(
                     this.clusters[cluster1Id].size,
-                    this.clusters[cluster2Id].size
+                    this.clusters[cluster2Id].size,
                 ),
                 max(
                     this.clusters[cluster1Id].size,
-                    this.clusters[cluster2Id].size
-                )
-            ) * 0.6
+                    this.clusters[cluster2Id].size,
+                ),
+            ) * 0.6,
         )
 
         for (let i = 0; i < connectionCount; i++) {
@@ -134,7 +132,7 @@ class Pool {
 
     private updateIndividualConnections(
         individual: Individual,
-        connection: Individual
+        connection: Individual,
     ) {
         if (!individual.connections.includes(connection)) {
             individual.connections.push(connection)
@@ -156,7 +154,7 @@ class Pool {
                 // Vector from cluster center to point
                 const toPoint = createVector(
                     point.vector.x - cluster.center.x,
-                    point.vector.y - cluster.center.y
+                    point.vector.y - cluster.center.y,
                 )
                 const distanceFromCenter = toPoint.mag()
 
@@ -166,7 +164,7 @@ class Pool {
                     // Apply stronger force if point is outside cluster radius
                     attractionForce.setMag(
                         clusterBoundaryForce *
-                            (distanceFromCenter - clusterRadius)
+                            (distanceFromCenter - clusterRadius),
                     )
                 } else {
                     attractionForce.setMag(clusterAttractionStrength)
@@ -182,12 +180,12 @@ class Pool {
                     ) {
                         const repulsionForce = createVector(
                             point.vector.x - otherCluster.center.x,
-                            point.vector.y - otherCluster.center.y
+                            point.vector.y - otherCluster.center.y,
                         )
                         const distance = repulsionForce.mag()
                         repulsionForce.setMag(
                             (1 / (distance * distance)) *
-                                clusterRepulsionStrength
+                                clusterRepulsionStrength,
                         )
                         point.vector.add(repulsionForce)
                     }
@@ -197,7 +195,7 @@ class Pool {
                 for (const connectedPoint of point.connections) {
                     const connectionForce = createVector(
                         connectedPoint.vector.x - point.vector.x,
-                        connectedPoint.vector.y - point.vector.y
+                        connectedPoint.vector.y - point.vector.y,
                     )
                     connectionForce.setMag(connectionAttractionStrength)
                     point.vector.add(connectionForce)
@@ -212,7 +210,7 @@ class Pool {
                     ) {
                         const strongRepulsionForce = createVector(
                             point.vector.x - otherPoint.vector.x,
-                            point.vector.y - otherPoint.vector.y
+                            point.vector.y - otherPoint.vector.y,
                         )
                         strongRepulsionForce.setMag(individualRepulsionStrength)
                         point.vector.add(strongRepulsionForce)
@@ -226,7 +224,7 @@ class Pool {
                 // Ensure the point stays within the cluster bounds
                 const finalToPoint = createVector(
                     point.vector.x - cluster.center.x,
-                    point.vector.y - cluster.center.y
+                    point.vector.y - cluster.center.y,
                 )
                 if (finalToPoint.mag() > clusterRadius) {
                     finalToPoint.setMag(clusterRadius)
@@ -280,7 +278,7 @@ class Pool {
                 otherPoint.vector.x * width,
                 otherPoint.vector.y * height,
                 (mid2X + offset2X) * width,
-                (mid2Y + offset2Y) * height
+                (mid2Y + offset2Y) * height,
             )
         }
         pop()
@@ -288,6 +286,8 @@ class Pool {
 
     renderPool() {
         this.updateClusterForces()
+
+        let temporaryHoverObject: Individual | null = null
 
         // Draw clusters
         push()
@@ -320,20 +320,25 @@ class Pool {
                 fill(
                     `rgba(${(point.clusterId * 50) % 255},${
                         (point.clusterId * 100) % 255
-                    },${(point.clusterId * 150) % 255},0.8)`
+                    },${(point.clusterId * 150) % 255},0.8)`,
                 )
                 const screenX = point.vector.x * width
                 const screenY = point.vector.y * height
 
                 const distanceToCenter = p5.Vector.dist(
                     point.vector,
-                    this.clusters[point.clusterId].center
+                    this.clusters[point.clusterId].center,
                 )
-                ellipse(
-                    screenX,
-                    screenY,
-                    200 * max(0.05, 0.1 - distanceToCenter)
-                )
+                const individualSize = 200 * max(0.05, 0.1 - distanceToCenter)
+
+                ellipse(screenX, screenY, individualSize)
+
+                if (
+                    dist(mouseX, mouseY, screenX, screenY) <
+                    individualSize / 2
+                ) {
+                    temporaryHoverObject = point
+                }
 
                 if (point.verified) {
                     AppUI.verifiedBadge(screenX + 12, screenY, 10)
@@ -344,5 +349,10 @@ class Pool {
             }
         }
         pop()
+        if (!temporaryHoverObject) {
+            hoveringIndividual = null
+        } else {
+            hoveringIndividual = temporaryHoverObject
+        }
     }
 }

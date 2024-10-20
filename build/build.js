@@ -50,10 +50,12 @@ class TSNDevice {
         return JSON.parse(this.recentLine);
     }
 }
+let hoveringIndividual = null;
 class Individual {
     constructor(vector, verified, personality, clusterId) {
         this.inbox = [];
         this.connections = [];
+        this.id = random(10000, 99999);
         this.personality = personality || {
             openness: random(0, 1),
             conscientiousness: random(0, 1),
@@ -136,6 +138,38 @@ class Individual {
             base = (base + message.property.attractive) / 2;
         }
         return Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.2));
+    }
+    describeFeeling() {
+        const { openness, conscientiousness, extraversion, agreeableness, neuroticism, } = this.personality;
+        let feeling = '';
+        if (openness > 0.7)
+            feeling += '🌟';
+        if (conscientiousness > 0.7)
+            feeling += '📊';
+        if (extraversion > 0.7)
+            feeling += '🎉';
+        if (agreeableness > 0.7)
+            feeling += '🤝';
+        if (neuroticism > 0.7)
+            feeling += '😰';
+        const unreadCount = this.inbox.filter((msg) => !msg.read).length;
+        if (unreadCount > 5)
+            feeling += '📨';
+        if (unreadCount > 10)
+            feeling += '🔔';
+        if (extraversion > 0.5 && unreadCount > 0)
+            feeling += '😊';
+        else if (neuroticism > 0.5 && unreadCount > 5)
+            feeling += '😓';
+        else if (openness > 0.5 && unreadCount === 0)
+            feeling += '🤔';
+        else if (conscientiousness > 0.5 && unreadCount > 0)
+            feeling += '🧐';
+        else if (agreeableness > 0.5)
+            feeling += '😌';
+        else
+            feeling += '😐';
+        return feeling;
     }
 }
 const OpenAIKey = '';
@@ -384,6 +418,7 @@ class Pool {
     }
     renderPool() {
         this.updateClusterForces();
+        let temporaryHoverObject = null;
         push();
         for (const clusterId in this.clusters) {
             const cluster = this.clusters[clusterId];
@@ -412,7 +447,12 @@ class Pool {
                 const screenX = point.vector.x * width;
                 const screenY = point.vector.y * height;
                 const distanceToCenter = p5.Vector.dist(point.vector, this.clusters[point.clusterId].center);
-                ellipse(screenX, screenY, 200 * max(0.05, 0.1 - distanceToCenter));
+                const individualSize = 200 * max(0.05, 0.1 - distanceToCenter);
+                ellipse(screenX, screenY, individualSize);
+                if (dist(mouseX, mouseY, screenX, screenY) <
+                    individualSize / 2) {
+                    temporaryHoverObject = point;
+                }
                 if (point.verified) {
                     AppUI.verifiedBadge(screenX + 12, screenY, 10);
                 }
@@ -420,6 +460,12 @@ class Pool {
             }
         }
         pop();
+        if (!temporaryHoverObject) {
+            hoveringIndividual = null;
+        }
+        else {
+            hoveringIndividual = temporaryHoverObject;
+        }
     }
 }
 let numberOfShapesControl;
@@ -432,33 +478,43 @@ function setup() {
     console.log('🚀 - Setup initialized - P5 is running');
     clusterSizeTable = {
         0: {
-            size: 10,
-            center: createVector(0.1, 0.8),
+            size: 90,
+            center: createVector(0.55, 0.45),
             enabled: true,
         },
         1: {
-            size: 20,
-            center: createVector(0.8, 0.3),
+            size: 60,
+            center: createVector(0.3, 0.2),
             enabled: true,
         },
         2: {
-            size: 40,
-            center: createVector(0.3, 0.8),
+            size: 10,
+            center: createVector(0.65, 0.1),
             enabled: true,
         },
         3: {
-            size: 20,
-            center: createVector(0.4, 0.2),
+            size: 15,
+            center: createVector(0.9, 0.3),
             enabled: true,
         },
         4: {
-            size: 100,
-            center: createVector(0.5, 0.5),
+            size: 40,
+            center: createVector(0.85, 0.65),
             enabled: true,
         },
         5: {
             size: 10,
-            center: createVector(0.8, 0.6),
+            center: createVector(0.55, 0.85),
+            enabled: true,
+        },
+        6: {
+            size: 5,
+            center: createVector(0.2, 0.8),
+            enabled: true,
+        },
+        7: {
+            size: 40,
+            center: createVector(0.25, 0.6),
             enabled: true,
         },
     };
@@ -491,10 +547,9 @@ class UI {
     constructor() {
         this.frame = [30, 30, 40, 60];
         this.clickDebounce = 0;
+        this.appUIBuffer = null;
         this.panelStack = [];
-        this.appUI = new AppUI([50, 50, 400, 300]);
         this.serialPrompt = new SerialPrompt([50, 50, 300, 200]);
-        this.appUI.enableUpdate();
         this.legend = new Legend([50, 50, 300, 260]);
         this.panelStack.push(this.serialPrompt, this.legend);
     }
@@ -539,13 +594,21 @@ class UI {
         rect(...this.frame, 10);
     }
     render() {
-        this.drawToggleButton(this.appUI, 0);
-        this.drawToggleButton(this.serialPrompt, 1);
-        this.drawToggleButton(this.legend, 2);
+        this.drawToggleButton(this.serialPrompt, 0);
+        this.drawToggleButton(this.legend, 1);
         let stackOffset = createVector(0, 0);
         for (const panel of this.panelStack) {
             panel.render(stackOffset);
             stackOffset.y += panel.frame[3] + 10;
+        }
+        if (hoveringIndividual) {
+            if (this.appUIBuffer === null || hoveringIndividual.id !== this.appUIBuffer.individual.id) {
+                this.appUIBuffer = new AppUI([50, 50, 400, 300], hoveringIndividual);
+            }
+            this.appUIBuffer.render(stackOffset);
+        }
+        else {
+            this.appUIBuffer = null;
         }
     }
 }
@@ -583,7 +646,7 @@ class UIPanel {
     }
 }
 class AppUI extends UIPanel {
-    constructor(frame) {
+    constructor(frame, individual) {
         super(frame);
         this.avatarColor = this.getRandomAvatarColor();
         this.avatarD = 70;
@@ -592,6 +655,7 @@ class AppUI extends UIPanel {
         this.id = this.getRandomID();
         this.verified = false;
         this.animatingMessages = [];
+        this.individual = individual;
         this.description = 'App UI';
         this.buttons = [
             {
@@ -802,6 +866,15 @@ class AppUI extends UIPanel {
             ellipse(currentX, currentY, 10);
         }
     }
+    drawFeelings() {
+        const feelings = this.individual.describeFeeling();
+        const feelingsX = this.getOffsetFrame()[0] + 60;
+        const feelingsY = this.getOffsetFrame()[1] + 160;
+        fill(0);
+        textSize(24);
+        textAlign(LEFT, CENTER);
+        text(feelings, feelingsX, feelingsY);
+    }
     render(panelOffset) {
         this.panelOffset = panelOffset;
         this.drawFrame();
@@ -809,6 +882,7 @@ class AppUI extends UIPanel {
         strokeWeight(0);
         this.drawAvatar();
         this.drawID();
+        this.drawFeelings();
         this.drawButtons();
         this.drawVisibilityButton();
         this.updateAnimations();
@@ -883,7 +957,7 @@ class Legend extends UIPanel {
         const average = animatingMessages.reduce((acc, curr) => {
             return acc + curr.property[type];
         }, 0) / animatingMessages.length;
-        const x = this.getOffsetFrame()[0] + (this.getOffsetFrame()[2] * average);
+        const x = this.getOffsetFrame()[0] + this.getOffsetFrame()[2] * average;
         strokeWeight(2);
         stroke(0);
         fill(255);

@@ -1,16 +1,14 @@
 class UI {
     frame: [number, number, number, number] = [30, 30, 40, 60]
     clickDebounce = 0
-    appUI: AppUI
+    appUIBuffer: AppUI | null = null
     serialPrompt: SerialPrompt
     legend: Legend
 
     panelStack: UIPanel[] = []
 
     constructor() {
-        this.appUI = new AppUI([50, 50, 400, 300])
         this.serialPrompt = new SerialPrompt([50, 50, 300, 200])
-        this.appUI.enableUpdate()
         this.legend = new Legend([50, 50, 300, 260])
         this.panelStack.push(this.serialPrompt, this.legend)
     }
@@ -64,15 +62,26 @@ class UI {
     }
 
     render() {
-        this.drawToggleButton(this.appUI, 0)
-        this.drawToggleButton(this.serialPrompt, 1)
-        this.drawToggleButton(this.legend, 2)
+        this.drawToggleButton(this.serialPrompt, 0)
+        this.drawToggleButton(this.legend, 1)
 
         let stackOffset = createVector(0, 0)
 
         for (const panel of this.panelStack) {
             panel.render(stackOffset)
             stackOffset.y += panel.frame[3] + 10
+        }
+
+        if (hoveringIndividual) {
+            if (this.appUIBuffer === null || hoveringIndividual.id !== this.appUIBuffer!.individual.id) {
+                this.appUIBuffer = new AppUI(
+                    [50, 50, 400, 300],
+                    hoveringIndividual!,
+                )
+            }
+            this.appUIBuffer.render(stackOffset)
+        } else {
+            this.appUIBuffer = null
         }
     }
 }

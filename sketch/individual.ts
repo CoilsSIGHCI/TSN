@@ -10,6 +10,8 @@ type FlaggedMessage = Message & {
     read: boolean
 }
 
+let hoveringIndividual: Individual | null = null
+
 class Individual {
     personality: IndividualPersonality
     verified: boolean
@@ -17,12 +19,13 @@ class Individual {
     inbox: Array<FlaggedMessage> = []
     connections: Array<Individual> = []
     clusterId: number
+    id = random(10000, 99999)
 
     constructor(
         vector: p5.Vector,
         verified?: boolean,
         personality?: IndividualPersonality,
-        clusterId?: number
+        clusterId?: number,
     ) {
         this.personality = personality || {
             openness: random(0, 1),
@@ -57,18 +60,18 @@ class Individual {
 
             this.personality.neuroticism = Math.max(
                 0,
-                Math.min(1, this.personality.neuroticism + aggressiveImpact)
+                Math.min(1, this.personality.neuroticism + aggressiveImpact),
             )
             this.personality.conscientiousness = Math.max(
                 0,
                 Math.min(
                     1,
-                    this.personality.conscientiousness + integrityImpact
-                )
+                    this.personality.conscientiousness + integrityImpact,
+                ),
             )
             this.personality.extraversion = Math.max(
                 0,
-                Math.min(1, this.personality.extraversion + attractiveImpact)
+                Math.min(1, this.personality.extraversion + attractiveImpact),
             )
 
             // Small changes to other traits
@@ -84,8 +87,8 @@ class Individual {
                             1,
                             this.personality[
                                 trait as keyof IndividualPersonality
-                            ]
-                        )
+                            ],
+                        ),
                     )
             }
 
@@ -127,7 +130,7 @@ class Individual {
             const message = new Message(
                 this,
                 property,
-                originalMessage?.topic ?? ''
+                originalMessage?.topic ?? '',
             )
             message.propagate(randomConnection)
         }
@@ -155,5 +158,38 @@ class Individual {
             base = (base + message.property.attractive) / 2
         }
         return Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.2))
+    }
+
+    describeFeeling(): string {
+        const {
+            openness,
+            conscientiousness,
+            extraversion,
+            agreeableness,
+            neuroticism,
+        } = this.personality
+        let feeling = ''
+
+        // Personality-based emojis
+        if (openness > 0.7) feeling += '🌟'
+        if (conscientiousness > 0.7) feeling += '📊'
+        if (extraversion > 0.7) feeling += '🎉'
+        if (agreeableness > 0.7) feeling += '🤝'
+        if (neuroticism > 0.7) feeling += '😰'
+
+        // Inbox-based emojis
+        const unreadCount = this.inbox.filter((msg) => !msg.read).length
+        if (unreadCount > 5) feeling += '📨'
+        if (unreadCount > 10) feeling += '🔔'
+
+        // Mood based on personality and inbox
+        if (extraversion > 0.5 && unreadCount > 0) feeling += '😊'
+        else if (neuroticism > 0.5 && unreadCount > 5) feeling += '😓'
+        else if (openness > 0.5 && unreadCount === 0) feeling += '🤔'
+        else if (conscientiousness > 0.5 && unreadCount > 0) feeling += '🧐'
+        else if (agreeableness > 0.5) feeling += '😌'
+        else feeling += '😐'
+
+        return feeling
     }
 }

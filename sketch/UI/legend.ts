@@ -16,7 +16,7 @@ class Legend extends UIPanel {
         text(
             this.description,
             this.getOffsetFrame()[0] + 30,
-            this.getOffsetFrame()[1] + 30
+            this.getOffsetFrame()[1] + 30,
         )
 
         // Draw three gradients reprenseting the different message properties
@@ -31,13 +31,10 @@ class Legend extends UIPanel {
                 integrity: 0,
                 attractive: 0,
             }),
-            this.getOffsetFrame()[1] + 70
+            this.getOffsetFrame()[1] + 70,
         )
         this.drawAverageLine('aggressive', this.getOffsetFrame()[1] + 70)
-        this.drawLegendText(
-            'Aggressive',
-            this.getOffsetFrame()[1] + 100
-        )
+        this.drawLegendText('Aggressive', this.getOffsetFrame()[1] + 100)
 
         this.drawGradient(
             Message.getMessageColor({
@@ -50,13 +47,10 @@ class Legend extends UIPanel {
                 integrity: 1,
                 attractive: 0,
             }),
-            this.getOffsetFrame()[1] + 130
+            this.getOffsetFrame()[1] + 130,
         )
         this.drawAverageLine('integrity', this.getOffsetFrame()[1] + 130)
-        this.drawLegendText(
-            'Integrity',
-            this.getOffsetFrame()[1] + 160
-        )
+        this.drawLegendText('Integrity', this.getOffsetFrame()[1] + 160)
 
         this.drawGradient(
             Message.getMessageColor({
@@ -69,20 +63,17 @@ class Legend extends UIPanel {
                 integrity: 0,
                 attractive: 1,
             }),
-            this.getOffsetFrame()[1] + 190
+            this.getOffsetFrame()[1] + 190,
         )
         this.drawAverageLine('attractive', this.getOffsetFrame()[1] + 190)
-        this.drawLegendText(
-            'Attractive',
-            this.getOffsetFrame()[1] + 220
-        )
+        this.drawLegendText('Attractive', this.getOffsetFrame()[1] + 220)
         pop()
     }
 
     private drawGradient(
         startColour: p5.Color,
         endColour: p5.Color,
-        y: number
+        y: number,
     ) {
         for (
             let x = this.getOffsetFrame()[0];
@@ -93,8 +84,8 @@ class Legend extends UIPanel {
                 lerpColor(
                     startColour,
                     endColour,
-                    x / (this.getOffsetFrame()[0] + this.getOffsetFrame()[2])
-                )
+                    x / (this.getOffsetFrame()[0] + this.getOffsetFrame()[2]),
+                ),
             )
             fill(colour)
             rect(x, y, 1, 20)
@@ -110,11 +101,12 @@ class Legend extends UIPanel {
 
     private drawAverageLine(type: keyof MessageProperty, y: number) {
         push()
-        const average = animatingMessages.reduce((acc, curr) => {
-            return acc + curr.property[type]
-        }, 0) / animatingMessages.length
+        const average =
+            animatingMessages.reduce((acc, curr) => {
+                return acc + curr.property[type]
+            }, 0) / animatingMessages.length
 
-        const x = this.getOffsetFrame()[0] + (this.getOffsetFrame()[2] * average)
+        const x = this.getOffsetFrame()[0] + this.getOffsetFrame()[2] * average
         strokeWeight(2)
         stroke(0)
         fill(255)

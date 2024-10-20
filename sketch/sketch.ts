@@ -14,33 +14,43 @@ function setup() {
     console.log('🚀 - Setup initialized - P5 is running')
     clusterSizeTable = {
         0: {
-            size: 10,
-            center: createVector(0.1, 0.8),
+            size: 90,
+            center: createVector(0.55, 0.45),
             enabled: true,
         },
         1: {
-            size: 20,
-            center: createVector(0.8, 0.3),
+            size: 60,
+            center: createVector(0.3, 0.2),
             enabled: true,
         },
         2: {
-            size: 40,
-            center: createVector(0.3, 0.8),
+            size: 10,
+            center: createVector(0.65, 0.1),
             enabled: true,
         },
         3: {
-            size: 20,
-            center: createVector(0.4, 0.2),
+            size: 15,
+            center: createVector(0.9, 0.3),
             enabled: true,
         },
         4: {
-            size: 100,
-            center: createVector(0.5, 0.5),
+            size: 40,
+            center: createVector(0.85, 0.65),
             enabled: true,
         },
         5: {
             size: 10,
-            center: createVector(0.8, 0.6),
+            center: createVector(0.55, 0.85),
+            enabled: true,
+        },
+        6: {
+            size: 5,
+            center: createVector(0.2, 0.8),
+            enabled: true,
+        },
+        7: {
+            size: 40,
+            center: createVector(0.25, 0.6),
             enabled: true,
         },
     }
@@ -63,7 +73,7 @@ function windowResized() {
 function draw() {
     // CLEAR BACKGROUND
     background(234)
-    
+
     updateAndDrawAnimatingMessages()
 
     // Grow
@@ -82,5 +92,4 @@ function draw() {
     pool.renderPool()
 
     ui.render()
-    
 }

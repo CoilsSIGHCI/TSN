@@ -16,10 +16,16 @@ class AppUI extends UIPanel {
     id: number = this.getRandomID()
     verified = false
     serialPrompt: SerialPrompt
-    animatingMessages: { message: Message, receiver: Individual }[] = []
+    animatingMessages: { message: Message; receiver: Individual }[] = []
+    individual: Individual
 
-    constructor(frame: [number, number, number, number]) {
+    constructor(
+        frame: [number, number, number, number],
+        individual: Individual,
+    ) {
         super(frame)
+
+        this.individual = individual
 
         this.description = 'App UI'
         this.buttons = [
@@ -323,6 +329,17 @@ class AppUI extends UIPanel {
         }
     }
 
+    drawFeelings() {
+        const feelings = this.individual.describeFeeling()
+        const feelingsX = this.getOffsetFrame()[0] + 60
+        const feelingsY = this.getOffsetFrame()[1] + 160
+
+        fill(0)
+        textSize(24)
+        textAlign(LEFT, CENTER)
+        text(feelings, feelingsX, feelingsY)
+    }
+
     render(panelOffset: p5.Vector) {
         this.panelOffset = panelOffset
         this.drawFrame()
@@ -330,6 +347,7 @@ class AppUI extends UIPanel {
         strokeWeight(0)
         this.drawAvatar()
         this.drawID()
+        this.drawFeelings() // Add this line
         this.drawButtons()
         this.drawVisibilityButton()
         this.updateAnimations()
